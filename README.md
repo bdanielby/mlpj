@@ -1,2 +1,7 @@
-# mlpj
-Tools for machine learning projects
+# mlpj: Tools for machine learning projects
+
+Contents of this repository:
+* `numpy_utils`: utilities and convenience functions for using the `numpy`
+  library in Python
+* `pandas_utils`: utilities and convenience functions for using the `numpy`
+  library in Python
