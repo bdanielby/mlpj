@@ -16,3 +16,4 @@ def is_numerical(ser):
       bool: whether the series can be used for numerical purposes
     """
     return ser.dtype.kind in "bif"
+

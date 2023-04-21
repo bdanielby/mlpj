@@ -1,0 +1,102 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+  <meta charset="utf-8">
+  <title>{{display.project_name}}: project log {{html_filepath}} {{author_part}}
+  </title>
+  <style type="text/css">
+<!--
+h3 { margin: 0; }
+.result_item { margin: 0;
+  color: black !important;
+  background-color: SeaGreen; border: 1px solid;
+}
+.result_item a:link { color: blue; }
+.result_item a:visited { color: blue; }
+pre { margin: 0; }
+th, td {
+    border: 2.4px solid black;
+}
+table {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+-->
+</style>
+<script type="text/javascript"
+   src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+
+<script>
+function start_image_refresh_timer(how_long, end_time,
+                                   key, path, refresh_millisec) {
+    how_long *= 1000;
+    end_time *= 1000;
+    
+    var now = new Date().getTime();
+    if (now >= end_time) {
+      return;
+    }
+    var timer = setInterval(function() {
+      var myImageElement = document.getElementById(key);
+      myImageElement.src = path + '?rand=' + Math.random();
+    }, refresh_millisec);
+
+    if (how_long > end_time - now) {
+      how_long = end_time - now;
+    }
+    canceller = setTimeout(function() {
+       clearInterval(timer);
+    }, how_long);
+}
+
+// workaround to get internal links to run on Chrome, Chromium:
+// https://community.wpbeaverbuilder.com/t/anchor-links-to-another-page-not-working-in-chrome/10557
+jQuery(document).ready(function () {
+    var isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    if (window.location.hash && isChrome) {
+        setTimeout(function () {
+            var hash = window.location.hash;
+            window.location.hash = "";
+            window.location.hash = hash;
+        }, 300);
+    }
+});
+</script>
+
+  {{further_html_headers}}
+  </head>
+<body>
+<h3>{{display.project_name}}: project log {{html_filepath}}</h3>
+  {% for key, contents in entries %}
+     <a name="{{key}}">
+     <h4 class="result_item"><a href="#{{key}}">{{key}}</a></h4>
+     {{contents}}
+  {% endfor %}
+
+<hr>
+
+<script>
+function update_images() {
+    $('img[data-src]').each(function(i){
+      var t = $(this);
+      var img_pos = t.position().top;
+      var scroll_top = $(window).scrollTop();
+      var visible_height = document.body.clientHeight;
+      var tolerance = 100;
+      
+      if (img_pos >= scroll_top - tolerance
+          && img_pos <= scroll_top + visible_height + tolerance) {
+        t.attr('src', t.attr('data-src')); // trigger the image load
+        t.removeAttr('data-src'); // so we only process this image once
+      }
+    });
+}
+
+$(document).ready(function(){
+  $(window).scroll(update_images);
+  update_images()
+});
+</script>
+
+</body>
+</html>
