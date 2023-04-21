@@ -22,8 +22,7 @@ from mlpj import python_utils as pu
 
 class HTMLDisplay(object):
     """
-    * {pa key=None} in {⠠d savefig, print, printer} will default to
-    {pa default_key}
+    * {pa key} in {⠠d savefig, print, printer}
     * If the key contains a colon, the part before the colon is used as the HTML
     file without the extensions instead of "index" and the part after the colon
     is used as the proper key.
@@ -33,7 +32,6 @@ class HTMLDisplay(object):
         # Let the Javascript refresh run at most for 1800 sec.
         refresh_how_long=30 * 60, # 30 minutes,
         refresh_not_started_after=12 * 3600, # 12 hours
-        default_key='{astep}',
     ):
         self.db_path = os.path.abspath(db_path)
 
@@ -61,7 +59,6 @@ class HTMLDisplay(object):
         self.further_html_headers = further_html_headers
         self.refresh_how_long = refresh_how_long
         self.refresh_not_started_after = refresh_not_started_after
-        self.default_key = default_key
     
     def _init_db_if_necessary(self):
         """Create the Sqlite3 database file and the table "findings" in it
@@ -165,7 +162,6 @@ class HTMLDisplay(object):
             cursor: Sqlite3 database cursor
             descending (bool): whether to sort in descending timestamp order
         """
-        #selection_file_dict = self.parse_selection_file()
         all_entries = {}
         # The subquery is necessary for the reverse ordering by timestamp within
         # the groups defined by the keys.
@@ -174,11 +170,11 @@ class HTMLDisplay(object):
         else:
             desc_part = ''
             
-        for key, contents, _ in cursor.execute("""
+        for key, contents, _ in cursor.execute(f"""
             select key, group_concat(contents, "\n"), max(timestamp) as maxts from (
             select key, contents, timestamp from findings
             order by timestamp desc, ind)
-            group by key order by maxts {}""".format(desc_part)
+            group by key order by maxts {desc_part}"""
         ):
             contents = re.sub(r'<img src="([^"]*)"',
                               r'<img data-src="\1" class="lazy"', contents)
@@ -214,21 +210,12 @@ class HTMLDisplay(object):
         if self.RE_VALID_FIGURE_KEY.match(key) is None:
             raise ValueError(
                 'Please avoid whitespace, parentheses or slashes in the '
-                'key for savefig: "{}"'.format(key))
+                f'key for savefig: "{key}"')
         plot_filepath = self._get_image_filepath(key)
         return key, plot_filepath
 
     @contextlib.contextmanager
-    def temp_default_key(self, key):
-        old_default_key = self.default_key
-        try:
-            self.default_key = key
-            yield
-        finally:
-            self.default_key = old_default_key
-
-    @contextlib.contextmanager
-    def savefig(self, key=None, description='', close_all=True,
+    def savefig(self, key, description='', close_all=True,
                 with_printer=True, tool='matplotlib',
                 with_bystyle=True, figsize=None, tight_layout=True,
                 logging_level=None, refresh_millisec=None):
@@ -312,7 +299,7 @@ class HTMLDisplay(object):
                     self._tight_layout()
             else:
                 yield plot_filepath
-        print("### new plot arrived: {}".format(key))
+        print(f"### new plot arrived: {key}")
         if tool == 'matplotlib':
             plt.savefig(plot_filepath)
         if description:
@@ -328,80 +315,31 @@ class HTMLDisplay(object):
         refresh_code = ""
         if refresh_millisec is not None:
             # {p how_long, end_time} are measured in seconds, not milliseconds
-            refresh_code = """
+            end_time= int(time.time()) + self.refresh_not_started_after
+            
+            refresh_code = f"""
             <script>
-            start_image_refresh_timer({how_long}, {end_time}, '{key}', '{path}',
-                                      {refresh_millisec});
+            start_image_refresh_timer(
+              {self.refresh_how_long}, {end_time}, '{key}', '{path}',
+              {refresh_millisec});
             </script>
-            """.format(key=key, path=path, refresh_millisec=refresh_millisec,
-                       how_long=self.refresh_how_long,
-                       end_time=int(
-                           time.time()) + self.refresh_not_started_after)
-        contents = ('<img src="{path}" id={key}><pre>{description}</pre>'
-                    '{refresh_code}'
-                    .format(path=path, key=key, description=description,
-                            refresh_code=refresh_code))
+            """
+        contents = (f'<img src="{path}" id={key}><pre>{description}</pre>'
+                    f'{refresh_code}')
             
         self.add_db_entry(key, contents)
         if close_all:
             plt.close('all')
 
-    @contextlib.contextmanager
-    def bokeh(self, key=None, description=''):
-        """
-        * {pa with_printer=True} is currently implied.
-        * {yields app}: {⠠C bokeh_utils.ApplicationOnFunctions}
-          * Please call {p app.register} at the end of the block. You can pass
-          callbacks from the application there.
-        """
-        from mlpj import bokeh_utils
-        
-        key, _ = self._get_figure_path(key)
-        
-        if not hasattr(self, '_bokeh_server'):
-            self._bokeh_server = bokeh_utils.ServerInBackgroundThread(
-                10, port=self.bokeh_port)
-            self._bokeh_server.start()
-            self._bokeh_app_dict = {}
-            self.further_html_headers = (
-                self.further_html_headers + '\n' +
-                jinja2.Template(
-                    bokeh_utils.BOKEH_HTML_HEADERS).render(
-                        port=self.bokeh_port))
-
-        app = self._bokeh_server.get_application(key)
-
-        if not app.is_registered():
-            out = pu.StringIOToleratingStr()
-            branched = pu.BranchedOutputStreams((out, sys.stdout))
-            text = None
-            with pu.redirect_stdouterr(branched, branched):
-                try:
-                    yield app
-                finally:
-                    text = out.getvalue().strip()
-                    if text:
-                        if description:
-                            description += '\n'
-                        description += text
-            if description:
-                print(description)
-                description += '\n'
-            contents = """{}\n<pre>{}</pre>""".format(
-                app.get_script_code(), description)
-            
-            self.add_db_entry(key, contents)
-        else:
-            app.call_update_from_app()
-        
-    def print(self, key=None, *content, **kwargs):
+    def print(self, key, *content, **kwargs):
         suppl = kwargs.pop('suppl', False)
         print('####', key, end=' ')
         print(*content, **kwargs)
         out = pu.StringIOToleratingStr()
         kwargs['file'] = out
         print(*content, **kwargs)
-        contents = "<pre>{}</pre>".format(out.getvalue().rstrip())
+        output = out.getvalue().rstrip()
+        contents = f"<pre>{output}</pre>"
         self.add_db_entry(key, contents, suppl=suppl)
 
     def _tight_layout(self):
@@ -419,11 +357,11 @@ class HTMLDisplay(object):
         if not silence_stdout:
             print(text)
         if preformatted:
-            text = "<pre>{}</pre>".format(text)
+            text = f"<pre>{text}</pre>"
         self.add_db_entry(key, text, suppl=suppl)
 
     @contextlib.contextmanager
-    def printer(self, key=None, suppl=False, silence_stdout=False, preformatted=True,
+    def printer(self, key, suppl=False, silence_stdout=False, preformatted=True,
               logging_level=None):
         """
         * If there's an exception in the user block, what has been printed
@@ -443,8 +381,8 @@ class HTMLDisplay(object):
             self._add_print(key, out, suppl, silence_stdout, preformatted)
 
     def link_text(self, description, filepath):
-        return """
+        filepath = pu.make_path_relative_to(filepath, self.html_dir)
+        return f"""
 </pre>
-<a target="_blank" href="{}">{}</a>
-<pre>""".format(pu.make_path_relative_to(filepath, self.html_dir),
-           description)
+<a target="_blank" href="{filepath}">{description}</a>
+<pre>"""

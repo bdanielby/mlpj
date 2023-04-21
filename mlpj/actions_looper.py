@@ -92,7 +92,7 @@ class PicklingStepsStorage(object):
         Returns:
             str: path to the pickling file for that step of that action
         """
-        return os.path.join(self.storage_dir, "{}_step{}".format(action, step))
+        return os.path.join(self.storage_dir, f"{action}_step{╭tep}")
 
     def delegate_ifn(self, result):
         """If the result is an ActionResultProxy, look up the action and step
@@ -171,22 +171,22 @@ class ActionsLooper(object):
 
         # In order to make the class reentrant, the following state variables
         #   are implamented as stacks.
-        self._current_action_stack = []
-        self._current_step_stack = []
-        self._current_step_method_stack = []
-        self._current_step_specs_stack = []
+        self._curr_action_stack = []
+        self._curr_step_stack = []
+        self._curr_step_method_stack = []
+        self._curr_step_specs_stack = []
         self.actions_level = 0
         
-    def as_current(self, decorated):
+    def as_curr(self, decorated):
         """Decorator to add the decorated class or function as an available action
-        under the name "current"
+        under the name "curr"
 
         Args:
             decorated (class or function): class or function to be decorated
         Returns:
             wrapped class or function
         """
-        self.add_available(decorated, name='current')
+        self.add_available(decorated, name='curr')
         return decorated
 
     def as_action(self, name=None):
@@ -234,14 +234,12 @@ class ActionsLooper(object):
                 name = self._name_of_obj_or_cls(obj)
             name = name_prefix + name
             if name in self._available_actions:
-                raise ValueError("conflict: action name {} already taken"
-                                 .format(name))
+                raise ValueError(f"conflict: action name {name} already taken")
             self._available_actions[name] = (obj, step_methods)
             return True
         elif not tolerate_empty:
             raise ValueError(
-                "no step methods found in this object or class: {}"
-                .format(name))
+                f"no step methods found in this object or class: {name}")
         return False
 
     def add_available_from_module(
@@ -269,8 +267,8 @@ class ActionsLooper(object):
                     anything_added |= self.add_available(obj, obj.__name__)
                 
         if not tolerate_empty and not anything_added:
-            raise ValueError("no suitable classes found in module {}"
-                             .format(module.__name__))
+            raise ValueError(
+                f"no suitable classes found in module {module.__name__}")
 
     def add_available_from_main_module(
             self, name_prefix='', pattern_for_funcs=None, tolerate_empty=False):
@@ -315,31 +313,40 @@ class ActionsLooper(object):
         self.execute(self.args.actions)
 
     @property
-    def current_action(self):
+    def curr_action(self):
         """The currently executed action.
 
         Returns:
             str: action name
         """
-        return self._current_action_stack[-1]
+        return self._curr_action_stack[-1]
         
     @property
-    def current_step(self):
+    def curr_step(self):
         """The currently executed step.
 
         Returns:
             int: step number
         """
-        return self._current_step_stack[-1]
+        return self._curr_step_stack[-1]
 
     @property
-    def current_step_method(self):
+    def curr_step_method(self):
         """The currently executed step method.
 
         Returns:
             str: method name
         """
-        return self._current_step_method_stack[-1]
+        return self._curr_step_method_stack[-1]
+
+    @property
+    def curr_astep(self):
+        """Action and method name of the currently executed step method
+
+        Returns:
+            str: `<action>_<method_name>`
+        """
+        return f"{self.curr_action}_{self.curr_step_method}"
 
     def execute(self, requested_action_specs):
         """Execute the registered actions and steps selected by the arguments.
@@ -351,7 +358,7 @@ class ActionsLooper(object):
         """
         to_execute = self._translate_requested_actions(requested_action_specs)
         for action, req_steps in to_execute:
-            self._current_action_stack.append(action)
+            self._curr_action_stack.append(action)
             try:
                 obj_or_cls, step_methods = self._available_actions[action]
                 if inspect.isclass(obj_or_cls):
@@ -361,7 +368,7 @@ class ActionsLooper(object):
 
                 self._execute1(obj, step_methods, req_steps)
             finally:
-                self._current_action_stack.pop()
+                self._curr_action_stack.pop()
                 
     def execute_fct_steps(self, locs):
         """Callback to be used from within function actions. It executes the
@@ -377,8 +384,8 @@ class ActionsLooper(object):
         """
         step_methods = self.step_methods_of_obj_cls_or_locs(locs)
         req_steps = self._translate_requested_steps(
-            self.current_action, step_methods,
-            self._current_step_specs_stack[-1])
+            self.curr_action, step_methods,
+            self._curr_step_specs_stack[-1])
         self._execute_steps_of_action(locs, step_methods, req_steps)
 
     def read_result(self, action, step):
@@ -535,8 +542,7 @@ class ActionsLooper(object):
                 match = re.match(r'[a-zA-Z_][a-zA-Z0-9_]*|%.*', req_action)
                 if match is None:
                     raise ValueError(
-                        'invalid action specification "{}"'.format(
-                            req_action))
+                        f'invalid action specification "{req_action}"')
                 
                 add_requested_steps()
                 if req_action.startswith('%'):
@@ -546,17 +552,15 @@ class ActionsLooper(object):
                         if re.search(pattern, name)]
                     if len(matched_names) == 0:
                         raise ValueError(
-                            "no match found for action pattern: {}".format(
-                                pattern))
+                            f"no match found for action pattern: {pattern}")
                     elif len(matched_names) > 1:
                         raise ValueError(
-                            "no unique match found for action pattern: {}"
-                            .format(pattern))
+                            "no unique match found for action pattern: "
+                            f"{pattern}")
                     cur_action = matched_names[0]
                 else:
                     if req_action not in self._available_actions:
-                        raise ValueError(
-                            'action "{}" not found'.format(req_action))
+                        raise ValueError(f'action "{req_action}" not found')
                     cur_action = req_action
             else:
                 # step specification encountered
@@ -575,7 +579,7 @@ class ActionsLooper(object):
         """Translate step specifications into a list of steps.
 
         Args:
-            cur_action (str): name of current action
+            cur_action (str): name of curr action
             step_methods (dict): mapping step number to method name
             requested_step_specs: list of integers or integer ranges built with
                 ":" or ".."
@@ -603,8 +607,8 @@ class ActionsLooper(object):
 
             if sep is None:
                 if step_start not in available_steps:
-                    raise ValueError("no step {} found in action {}"
-                                     .format(step_start, cur_action))
+                    raise ValueError(
+                        f"no step {step_start} found in action {cur_action}")
                 cur_steps.append(step_start)
             else:
                 step_ub = match.group(3)
@@ -622,8 +626,7 @@ class ActionsLooper(object):
                             steps_to_add.append(stepno)
                 if not steps_to_add:
                     raise ValueError("no steps found matching the range "
-                                     "{} in action {}".format(
-                                         req_action, cur_action))
+                                     f"{req_action} in action {cur_action}")
                 cur_steps.extend(steps_to_add)
         return cur_steps
 
@@ -722,11 +725,11 @@ class ActionsLooper(object):
             # If there are no step methods, the object must be a
             #   function. Call it. It may call {⠠d execute_fct_steps}
             #   back.
-            self._current_step_specs_stack.append(req_steps)
+            self._curr_step_specs_stack.append(req_steps)
             try:
                 obj()
             finally:
-                self._current_step_specs_stack.pop()
+                self._curr_step_specs_stack.pop()
         else:
             self._execute_steps_of_action(obj, step_methods, req_steps)
 
@@ -741,7 +744,7 @@ class ActionsLooper(object):
         """
         from mlpj import plot_utils
 
-        action = self.current_action
+        action = self.curr_action
         # Since a requested step can be mentioned multiple times and in any
         #   order, we must first read the required results and then loop
         #   over the requested steps. A loop over all steps using a set of
@@ -752,25 +755,25 @@ class ActionsLooper(object):
 
         for req_step in req_steps:
             method_name = step_methods[req_step]
-            self._current_step_stack.append(req_step)
-            self._current_step_method_stack.append(method_name)
+            self._curr_step_stack.append(req_step)
+            self._curr_step_method_stack.append(method_name)
             try:
                 with plot_utils.plot_style():
-                    print("@" * len(self._current_action_stack), end=' ')
+                    print("@" * len(self._curr_action_stack), end=' ')
                     if self.with_termseq:
                         print("{}{}{}.{}{}{}".format(
                             pu.TERMSEQ['cyan['], action, pu.TERMSEQ[']'],
                             pu.TERMSEQ['green['], method_name, pu.TERMSEQ[']']))
                     else:
-                        print("{}.{}".format(action, method_name))
+                        print(f"{action}.{method_name}")
                     result = self._call_step_method(
                         obj, method_name, req_step, data)
                     if self._is_step_with_result(step_methods, req_step):
                         result = self.steps_storage.write(action, req_step, result)
                         data[req_step] = result
             finally:
-                self._current_step_method_stack.pop()
-                self._current_step_stack.pop()
+                self._curr_step_method_stack.pop()
+                self._curr_step_stack.pop()
     
     def _parse_sys_args(self, args=None):
         """Call `action_parser`, lets it act on `args` and saves the result in

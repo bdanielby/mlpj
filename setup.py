@@ -16,6 +16,8 @@ setup(
     author='Bruno Daniel',
     license='MIT',
     packages=['mlpj'],
+    package_data={'mlpj': ['result_template.html']},
+    include_package_data=True,
     install_requires=[
         'numpy', 'pandas', 'matplotlib'
     ],

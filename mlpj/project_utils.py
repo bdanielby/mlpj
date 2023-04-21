@@ -49,7 +49,7 @@ class Manager(object):
 
         if doc is None:
             doc = ''
-        doc = "{}\n{}".format(self.name, doc)
+        doc = f"{self.name}\n{doc}"
         
         steps_storage = actions_looper.PicklingStepsStorage(
             os.path.join(self.project_dir, "steps"))
@@ -57,9 +57,9 @@ class Manager(object):
         self.actions_looper = actions_looper.ActionsLooper(
             steps_storage, doc=self.doc)
     
-    def as_current(self, *args, **kwargs):
-        """delegates to `actions_looper.ActionsLooper.current`"""
-        return self.actions_looper.as_current(*args, **kwargs)
+    def as_curr(self, *args, **kwargs):
+        """delegates to `actions_looper.ActionsLooper.curr`"""
+        return self.actions_looper.as_curr(*args, **kwargs)
     
     def as_action(self, *args, **kwargs):
         """delegates to `actions_looper.ActionsLooper.action`"""
@@ -87,19 +87,24 @@ class Manager(object):
 
     
     @property
-    def current_action(self):
-        """delegates to `actions_looper.ActionsLooper.current_action`"""
-        return self.actions_looper.current_action
+    def curr_action(self):
+        """delegates to `actions_looper.ActionsLooper.curr_action`"""
+        return self.actions_looper.curr_action
         
     @property
-    def current_step(self):
-        """delegates to `actions_looper.ActionsLooper.current_step`"""
-        return self.actions_looper.current_step
+    def curr_step(self):
+        """delegates to `actions_looper.ActionsLooper.curr_step`"""
+        return self.actions_looper.curr_step
         
     @property
-    def current_step_method(self):
-        """delegates to `actions_looper.ActionsLooper.current_step_method`"""
-        return self.actions_looper.current_step_method
+    def curr_astep(self):
+        """delegates to `actions_looper.ActionsLooper.curr_astep`"""
+        return self.actions_looper.curr_astep
+        
+    @property
+    def curr_step_method(self):
+        """delegates to `actions_looper.ActionsLooper.curr_step_method`"""
+        return self.actions_looper.curr_step_method
     
     def execute(self, *args, **kwargs):
         """delegates to `actions_looper.ActionsLooper.execute`"""
@@ -126,10 +131,6 @@ class Manager(object):
         """delegates to `result_display.HTMLDisplay.savefig`"""
         return self.display.savefig(*args, **kwargs)
     
-    def bokeh(self, *args, **kwargs):
-        """delegates to `result_display.HTMLDisplay.bokeh`"""
-        return self.display.bokeh(*args, **kwargs)
-
     def link_text(self, *args, **kwargs):
         """delegates to `result_display.HTMLDisplay.link_text`"""
         return self.display.link_text(*args, **kwargs)
