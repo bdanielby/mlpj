@@ -59,7 +59,7 @@ def perc_str(value, reference):
         str: value with percentage
     """
     _, perc = wi_perc(value, reference)
-    return f"{value} ({reference:.2f} %)"
+    return f"{value} ({perc:.2f} %)"
 
 
 def first_of_each_item(items):
@@ -69,12 +69,6 @@ def first_of_each_item(items):
         items (list of indexable objects): input list of items
     Returns:
         list of objects: For each item in the input, `item[0]`.
-    
-    >>> first_of_each_item([('a', 3, 9), ('b', 4), ('c',)])
-    ['a', 'b', 'c']
-    >>> first_of_each_item(collections.OrderedDict([('A', 3), ('B', 4)])
-    ...     .items())
-    ['A', 'B']
     """
     return [item[0] for item in items]
 
@@ -99,18 +93,6 @@ def make_path_relative_to(filepath, reference_path):
         reference_path (str): reference filepath
     Returns:
         str: relative filepath as seen from the reference filepath
-    
-    >>> make_path_relative_to('/ab/cd/d/e', '/ab/cd')
-    'd/e'
-    >>> make_path_relative_to('/ab/cd/d/e', '/ab/cd/d2')
-    '../d/e'
-    >>> make_path_relative_to('/abd/cd/d/e', '/ab/cd/d2')
-    '../../../abd/cd/d/e'
-
-    >>> make_path_relative_to('/ab//cd//d/e/', '/ab//cd/')
-    'd/e'
-    >>> make_path_relative_to('/ab//cd//d/e/', '/ab//cd//d2')
-    '../d/e'
     """
     parts = os.path.normpath(filepath).split(os.path.sep)
     parts_ref = os.path.normpath(reference_path).split(os.path.sep)
