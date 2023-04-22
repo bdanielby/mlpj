@@ -57,3 +57,8 @@ TERMSEQ = {
     #'bold[': "\x1b[30;1m",
     ']': "\x1b[0m",
 }
+
+
+SECONDS_IN_HOUR = 3600
+
+SECONDS_IN_DAY = 24 * SECONDS_IN_HOUR

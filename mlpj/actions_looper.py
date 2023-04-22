@@ -153,6 +153,9 @@ class ActionsLooper(object):
     The actions loop is reentrant, i.e. you can call `execute` while it already
     executes an actions loop.
 
+    Instead of an object of this class, a project manager from module
+    `project_utils` can be used because it delegates to this class internally.
+    
     Args:
         steps_storage (PicklingStepsStorage): object to handle the storage of
             step results

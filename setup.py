@@ -8,7 +8,7 @@ github_url = 'https://github.com/bdanielby/mlpj'
 
 setup(
     name='mlpj',
-    version='0.1.1',
+    version='0.1.2',
     description='Tools for machine learning projects',
     long_description=read('README.md'),
     long_description_content_type='text/markdown',
@@ -19,7 +19,8 @@ setup(
     package_data={'mlpj': ['result_template.html']},
     include_package_data=True,
     install_requires=[
-        'numpy', 'pandas', 'matplotlib'
+        'numpy', 'pandas', 'matplotlib', 'numba', 'lockfile', 'jinja2',
+        'markupsafe',
     ],
     project_urls={
         'Homepage': github_url,

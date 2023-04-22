@@ -131,10 +131,35 @@ class Manager(object):
         """delegates to `result_display.HTMLDisplay.savefig`"""
         return self.display.savefig(*args, **kwargs)
     
+    def add_db_entry(self, *args, **kwargs):
+        """delegates to `result_display.HTMLDisplay.add_db_entry`"""
+        return self.display.add_db_entry(*args, **kwargs)
+        
     def link_text(self, *args, **kwargs):
         """delegates to `result_display.HTMLDisplay.link_text`"""
         return self.display.link_text(*args, **kwargs)
     
+    def print_link_and_return_filepath(filename, remark=''):
+        """Create a filepath for the given filename in the image directory and
+        print an HTML link to it.
+
+        Args:
+            filename (str): filename (no directory)
+            remark (str, optional): remark to print before the link text
+        Returns:
+            str: filepath in the image directory
+        """
+        filepath = os.path.join(self.image_path, filename)
+        link_text = self.display.link_text(filepath)
+        print(f'{remark}{link_text}')
+        return filepath
+
+    def get_analysis_pdf_filepath(name, iteration=-1):
+        if iteration == -1:
+            suffix = ""
+        else:
+            suffix = f"_{iteration}"
+        return os.path.join(self.image_path, f"{name}{suffix}.pdf")
     
     def get_keys(self):
         """delegates to `result_display.HTMLDisplay.get_keys`"""
