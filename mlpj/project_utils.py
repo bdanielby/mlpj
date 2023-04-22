@@ -135,7 +135,7 @@ class Manager(object):
         """delegates to `result_display.HTMLDisplay.link_text`"""
         return self.display.link_text(*args, **kwargs)
     
-    def print_link_and_return_filepath(filename, remark=''):
+    def print_link_and_return_filepath(self, filename, remark=''):
         """Create a filepath for the given filename in the image directory and
         print an HTML link to it.
 

@@ -20,16 +20,46 @@ def isstring(s):
     return isinstance(s, (str, bytes))
 
 
-def wi_perc(n, n_all):
-    """Return n and the percentage of n in `n_all`.
+def if_true(flag, value, default=''):
+    """If the flag is true, return the value, otherwise the default.
 
     Args:
-        n (int): count of items with a some feature
-        n_all (int): total count
+        flag (bool): control flag
+        value (object): value to return if the flag is true
+        default (object): value to return if the flag is false
     Returns:
-        n, perc: The original number and the percentage (scaled to 100)
+        the chosen value as specified above
     """
-    return n, n / n_all * 100.
+    if flag:
+        return value
+    else:
+        return default
+    
+
+def wi_perc(value, reference):
+    """Return the value and the percentage of the value in the reference.
+
+    Args:
+        value (number): value to compare
+        reference (number): total amount
+    Returns:
+        value, perc: The original value and the percentage (scaled to 100)
+    """
+    return value, value / reference * 100.
+
+
+def perc_str(value, reference):
+    """Return a string with the value and the percentage of the value in
+    the reference.
+
+    Args:
+        value (number): value to compare
+        reference (number): total amount
+    Returns:
+        str: value with percentage
+    """
+    _, perc = wi_perc(value, reference)
+    return f"{value} ({reference:.2f} %)"
 
 
 def first_of_each_item(items):
