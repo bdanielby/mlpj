@@ -1,6 +1,8 @@
 """
 Unit tests for `mlpj.pandas_utils`.
 """
+import datetime
+import collections
 import io
 
 import numpy as np
@@ -9,6 +11,7 @@ import numba
 import pandas.testing as pd_testing
 import pytest
 
+from mlpj import python_utils as pu
 from mlpj import pandas_utils as pdu
 
 nan = np.nan
@@ -182,7 +185,7 @@ def test_shuffle_df_drop_index():
     df = pd.DataFrame(np.random.random(size=(3, 3)), columns=['a', 'b', 'c'])
     df1 = pdu.shuffle_df_drop_index(df)
     np.testing.assert_array_equal(df1.index.values, np.arange(len(df)))
-    np.testing.assert_array_equal(df1.sum(), df.sum())
+    np.testing.assert_allclose(df1.sum(), df.sum())
 
 
 def test_assert_frame_contents_equal():
@@ -330,3 +333,189 @@ def test_flatten_multi_columns():
             ('b_2', ['a', 'b', 'b', 'a']),
             ('c_1', ['x', 'y', 'z', 'x'])
         ], index=[3, 4, 5, 8]))
+
+
+def test_rename_groupby_colnames():
+    df = pdu.from_items([
+        ('g', [0, 0, 0, 0, 1, 1, 1]),
+        ('a', [2, 3, 0, 1, 4, 2, 1]),
+        ('b', [-1, 1, 2, 0, -2, 1, 0]),
+        ('c', [8, 2, 5, 1, -2, -1, 4]),
+    ])
+    
+    dfg = df.groupby('g').agg(collections.OrderedDict([
+        ('a', ['sum', 'max']),
+        ('b', ['sum', 'count']),
+        ('c', 'max'),
+    ]))
+
+    dfg1 = dfg.copy()
+    pdu.rename_groupby_colnames(dfg1, name_for_count='group_count')
+    pd_testing.assert_frame_equal(
+        dfg1,
+        pdu.from_items([
+            ('a__sum', [6, 7]),
+            ('a__max', [3, 4]),
+            ('b', [2, -1]),
+            ('group_count', [4, 3]),
+            ('c', [8, 4])
+        ], index=pd.Index([0, 1], name='g')))
+    
+    dfg2 = dfg.copy()
+    pdu.rename_groupby_colnames(
+        dfg2, name_for_count='group_count',
+        renamings={'a__sum': 'summed_a', 'g': 'group', 'group_count': 'count'}
+    )
+    pd_testing.assert_frame_equal(
+        dfg2,
+        pdu.from_items([
+            ('summed_a', [6, 7]),
+            ('a__max', [3, 4]),
+            ('b', [2, -1]),
+            ('count', [4, 3]),
+            ('c', [8, 4])
+        ], index=pd.Index([0, 1], name='group')))
+
+
+def test_print_column_info():
+    ser = pd.Series([3, 4, nan, 2])
+    
+    out = io.StringIO()
+    with pu.redirect_stdouterr(out, out):
+        pdu.print_column_info(ser, table_name='X')
+
+
+def test_print_table_info():
+    df = pdu.from_items([
+        ('a', [2, 3, 0, 1, 4, 2, 1]),
+        ('c', [8, 2, 5, 1, -2, -1, 4]),
+    ])
+    
+    out = io.StringIO()
+    with pu.redirect_stdouterr(out, out):
+        pdu.print_table_info(df, table_name='X')
+
+
+def test_consistency_check():
+    df = pdu.from_items([
+        ('a', [2, 3,    0, 1, 4.1, 2, 1]),
+        ('a1', [2, 3.1, 0, 1, 4,   2, 1]),
+        ('c', [8, 2, 5, 1, -2, -1, 4]),
+    ])
+    
+    out = io.StringIO()
+    with pu.redirect_stdouterr(out, out):
+        pdu.consistency_check(df, 'a', 'a1')
+
+
+def test_truncate_datetime_to_freq():
+    x = pd.Series(pd.to_datetime(['2023-04-22 10:40:22', '2023-03-01']))
+    
+    pd_testing.assert_series_equal(
+        pdu.truncate_datetime_to_freq(x, 'D'),
+        pd.Series(pd.to_datetime(['2023-04-22', '2023-03-01'])))
+    
+    pd_testing.assert_series_equal(
+        pdu.truncate_datetime_to_freq(x, 'M'),
+        pd.Series(pd.to_datetime(['2023-04-01', '2023-03-01'])))
+    
+    pd_testing.assert_series_equal(
+        pdu.truncate_datetime_to_freq(x, 'W'),
+        pd.Series(pd.to_datetime(['2023-04-17', '2023-02-27'])))
+
+
+def test_truncate_datetime_to_month():
+    df = pd.DataFrame({'dt': pd.to_datetime(['2017-09-12', '2017-10-20'])})
+    
+    df['dtm'] = pdu.truncate_datetime_to_month(df['dt'])
+    
+    pd_testing.assert_frame_equal(
+        df, pdu.from_items([
+        ('dt', pd.to_datetime(['2017-09-12', '2017-10-20'])),
+        ('dtm', pd.to_datetime(['2017-09-01', '2017-10-01']))]))
+
+
+def test_truncate_datetime_to_week():
+    df = pd.DataFrame({'dt': pd.to_datetime(['2017-09-11', '2017-09-24'])})
+    
+    df['dtm'] = pdu.truncate_datetime_to_week(df['dt'])
+    df['dtm_sun'] = pdu.truncate_datetime_to_week(df['dt'], sunday_first=True)
+    
+    pd_testing.assert_frame_equal(
+        df, pdu.from_items([
+            ('dt', pd.to_datetime(['2017-09-11', '2017-09-24'])),
+            ('dtm', pd.to_datetime(['2017-09-11', '2017-09-18'])),
+            ('dtm_sun', pd.to_datetime(['2017-09-10', '2017-09-24']))
+        ]))
+
+
+def test_datetime_to_epoch():
+    pd_testing.assert_series_equal(
+        pdu.datetime_to_epoch(
+            pd.Series(pd.to_datetime(["1970-01-01", "1970-01-01 0:01:02.345",
+                                      "NaT"]))),
+        pd.Series([0., 62.345, nan]), check_exact=True)
+    
+    pd_testing.assert_series_equal(
+        pdu.datetime_to_epoch(
+            pd.Series([pd.to_datetime("1970-01-01 1:00:00")])),
+        pd.Series([3600.]))
+
+
+def test_remove_last_n_days():
+    df = pdu.from_items([
+        ('date', pd.to_datetime(
+            [pu.n_days_ago(20), pu.n_days_ago(5), pu.n_days_ago(10)])),
+        ('a', [2, 3, 1])
+    ])
+    
+    df1 = pdu.remove_last_n_days(df, 'date', 10)
+    pdu.assert_frame_contents_equal(
+        df1,
+        pdu.from_items([
+            ('date', pd.to_datetime([pu.n_days_ago(20), pu.n_days_ago(10)])),
+            ('a', [2, 1])
+        ]))
+
+    
+def test_ts_train_test_split():
+    df = pdu.from_items([
+        ('date', pd.to_datetime(['2023-03-05', '2023-01-15', '2023-02-01'])),
+        ('a', [2, 3, 1]),
+        ('y', [0, 1, -1]),
+    ])
+
+    X_train, y_train, X_test, y_test = pdu.ts_train_test_split(
+        df, '2023-02-01', 'date', 'y')
+
+    pd_testing.assert_frame_equal(
+        X_train,
+        pdu.from_items([
+            ('date', pd.to_datetime(['2023-01-15'])),
+            ('a', [3]),
+            ('y', [1]),
+        ], index=[1]))
+
+    np.testing.assert_array_equal(y_train, [1])
+
+    pd_testing.assert_frame_equal(
+        X_test,
+        pdu.from_items([
+            ('date', pd.to_datetime(['2023-03-05', '2023-02-01'])),
+            ('a', [2, 1]),
+            ('y', [0, -1]),
+        ], index=[0, 2]))
+
+    np.testing.assert_array_equal(y_test, [0, -1])
+    
+
+def test_to_csv():
+    df = pdu.from_items([
+        ('b', np.array([3, 8])),
+        ('a', ['first', 'second']),
+    ], index=[3, 4])
+
+    out = io.StringIO()
+    pdu.to_csv(df, out)
+
+    assert out.getvalue() == "b;a\n3;first\n8;second\n"

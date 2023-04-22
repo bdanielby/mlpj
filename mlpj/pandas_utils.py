@@ -478,7 +478,7 @@ def rename_groupby_colnames(df, name_for_count=None, renamings=()):
                     df.index.levels[i_level].name = renamings[name]
         else:
             if df.index.name in renamings:
-                df.index.name = renamings[name]
+                df.index.name = renamings[df.index.name]
 
 
 def print_column_info(col, table_name=None, ignored_columns=(), n_value_counts=50):
@@ -606,20 +606,6 @@ def distinct_keys_of_dict_column(ser):
     return np.unique(keys_of_dict_column(ser))
 
 
-def remove_last_n_days(df, datetime_colname, n_days):
-    """Remove the last n_days days from the dataframe.
-
-    Args:
-        df (`pd.DataFrame`): input dataframe
-        datetime_colname (str): column name containing pd-datetime values
-        n_days (int): number of days (prior to today) to remove
-    Returns:
-        `pd.DataFrame`: filtered dataframe
-    """
-    last_day = pu.n_days_ago(n_days)
-    return df[df[datetime_colname] <= pd.to_datetime(last_day)]
-
-
 def truncate_datetime_to_freq(ser, freq):
     """Truncate datetime values to the specified period.
 
@@ -632,7 +618,7 @@ def truncate_datetime_to_freq(ser, freq):
     return ser.dt.to_period(freq).dt.start_time
 
 
-def shift_date_series_to_beginning_of_month(ser):
+def truncate_datetime_to_month(ser):
     """Truncate datetime values to the beginning of the month.
 
     Special case of `truncate_datetime_to_freq` with frequency 'M'.
@@ -646,7 +632,7 @@ def shift_date_series_to_beginning_of_month(ser):
     return truncate_datetime_to_freq(ser, 'M')
 
 
-def shift_date_series_to_beginning_of_week(ser, sunday_first=False):
+def truncate_datetime_to_week(ser, sunday_first=False):
     """Truncate datetime values to the beginning of the week.
 
     Special case of `truncate_datetime_to_freq`.
@@ -683,19 +669,18 @@ def datetime_to_epoch(ser):
     return (ser - MIN_DATETIME).dt.total_seconds()
 
 
-def to_csv(df, filepath, **kwargs):
-    """Convenience function to call `pd.DataFrame.to_csv` with common
-    defaults.
+def remove_last_n_days(df, datetime_colname, n_days):
+    """Remove the last n_days days from the dataframe.
 
     Args:
         df (`pd.DataFrame`): input dataframe
-        filepath (str): CSV filepath to create
-        kwargs: See `pd.DataFrame.to_csv`.
+        datetime_colname (str): column name containing pd-datetime values
+        n_days (int): number of days (prior to today) to remove
+    Returns:
+        `pd.DataFrame`: filtered dataframe
     """
-    kwargs.setdefault('sep', ';')
-    kwargs.setdefault('index', False)
-    kwargs.setdefault('encoding', 'utf-8')
-    df.to_csv(filepath, **kwargs)
+    last_day = pu.n_days_ago(n_days)
+    return df[df[datetime_colname] <= pd.to_datetime(last_day)]
 
 
 def ts_train_test_split(df, train_test_split_date, date_colname, target_colname):
@@ -725,3 +710,16 @@ def ts_train_test_split(df, train_test_split_date, date_colname, target_colname)
     return X_train, y_train, X_test, y_test
 
 
+def to_csv(df, filepath, **kwargs):
+    """Convenience function to call `pd.DataFrame.to_csv` with common
+    defaults.
+
+    Args:
+        df (`pd.DataFrame`): input dataframe
+        file (str or stream): CSV filepath to create or stream to write to
+        kwargs: See `pd.DataFrame.to_csv`.
+    """
+    kwargs.setdefault('sep', ';')
+    kwargs.setdefault('index', False)
+    kwargs.setdefault('encoding', 'utf-8')
+    df.to_csv(filepath, **kwargs)
