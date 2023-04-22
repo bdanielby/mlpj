@@ -25,12 +25,11 @@ class Manager(object):
             `numpy` and `random`
         doc (str, optional): project documentation to be displayed in the command
             line help
-        verbose (int): verbosity of the result display
     """
-    def __init__(self, project_path, seed=None, doc=None, verbose=1):
+    def __init__(self, project_path, seed=None, doc=None):
         self.project_dir = os.path.abspath(os.path.expanduser(project_path))
         pu.makedir_unless_exists(self.project_dir)
-        self.name = os.path.basename(name)
+        self.name = os.path.basename(self.project_dir)
         
         self.db_path = os.path.join(self.project_dir, "contents.db")
         self.html_path = os.path.join(self.project_dir, "html")
@@ -42,10 +41,8 @@ class Manager(object):
             np.random.seed(seed)
             random.seed(seed + 1)
 
-        self.verbose = verbose
-        
         self.display = result_display.HTMLDisplay(
-            self.db_path, self.name, self.html_path, self.image_path, verbose=verbose)
+            self.db_path, self.name, self.html_path, self.image_path)
 
         if doc is None:
             doc = ''
@@ -54,8 +51,7 @@ class Manager(object):
         steps_storage = actions_looper.PicklingStepsStorage(
             os.path.join(self.project_dir, "steps"))
 
-        self.actions_looper = actions_looper.ActionsLooper(
-            steps_storage, doc=self.doc)
+        self.actions_looper = actions_looper.ActionsLooper(steps_storage, doc=doc)
     
     def as_curr(self, *args, **kwargs):
         """delegates to `actions_looper.ActionsLooper.curr`"""

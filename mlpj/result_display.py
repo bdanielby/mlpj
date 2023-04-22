@@ -5,9 +5,10 @@ import os
 import sys
 import re
 import logging
-import contextlib
 import time
+import io
 
+import contextlib
 import jinja2
 import markupsafe
 import numpy as np
@@ -18,6 +19,7 @@ import lockfile
 
 from mlpj import pandas_utils as pdu
 from mlpj import python_utils as pu
+from mlpj import plot_utils as pltu
 
 
 class HTMLDisplay(object):
@@ -71,12 +73,11 @@ class HTMLDisplay(object):
     def __init__(self, db_path, project_name, html_dir, image_dir,
         default_figsize=(8, 6), further_html_headers='',
         refresh_how_long=pu.SECONDS_IN_HOUR // 2,
-        refresh_not_started_after=SECONDS_IN_DAY // 2,
+        refresh_not_started_after=pu.SECONDS_IN_DAY // 2,
     ):
         self.db_path = os.path.abspath(db_path)
 
-        with open(
-                os.path.join(os.path.dirname(__file__, "result_template.html"))
+        with open(os.path.join(os.path.dirname(__file__), "result_template.html")
         ) as fin:
             self.html_template = jinja2.Template(fin.read())
 
@@ -117,7 +118,7 @@ class HTMLDisplay(object):
                 only registered in the database.
             preformatted (bool): If `True`, wrap the content in HTML pre-tags.
         """
-        out = pu.StringIOToleratingStr()
+        out = io.StringIO()
         branched = out
         text = None
         try:
@@ -125,7 +126,8 @@ class HTMLDisplay(object):
                 with pdu.wide_display():
                     yield key
         finally:
-            self.print(key, out, suppl=suppl, silence_stdout=silence_stdout,
+            content = out.getvalue().rstrip()
+            self.print(key, content, suppl=suppl, silence_stdout=silence_stdout,
                     preformatted=preformatted)
 
     def print(self, key, content, suppl=False, silence_stdout=False, preformatted=False):
@@ -143,14 +145,13 @@ class HTMLDisplay(object):
                 only registered in the database.
             preformatted (bool): If `True`, wrap the content in HTML pre-tags.
         """
-        text = out.getvalue().rstrip()
-        if not text.strip():
+        if not content.strip():
             return
         if not silence_stdout:
-            print('####', key, text)
+            print('####', key, content)
         if preformatted:
-            text = f"<pre>{text}</pre>"
-        self.add_db_entry(key, text, suppl=suppl)
+            content = f"<pre>{content}</pre>"
+        self.add_db_entry(key, content, suppl=suppl)
         
     @contextlib.contextmanager
     def savefig(self, key, tool='matplotlib', with_printer=True, with_libstyle=True,
@@ -217,9 +218,9 @@ class HTMLDisplay(object):
                 with pdu.wide_display():
                     try:
                         if tool == 'matplotlib':
-                            if with_bystyle:
+                            if with_libstyle:
                                 from mlpj import plots
-                                with plots.bystyle_context():
+                                with plots.libstyle():
                                     yield plot_filepath
                             else:
                                 yield plot_filepath
@@ -233,9 +234,9 @@ class HTMLDisplay(object):
             #if tool == 'r':
             #    self._plot_in_r(plot_filepath, pixelsize_args)
             if tool == 'matplotlib':
-                if with_bystyle:
+                if with_libstyle:
                     from mlpj import plots
-                    with plots.bystyle_context():
+                    with plots.libstyle():
                         yield plot_filepath
                 else:
                     yield plot_filepath
@@ -453,9 +454,8 @@ class HTMLDisplay(object):
         """Call `plt.tight_layout` unless this is turned off by
         `plot_utils.AVOID_TIGHT_LAYOUT`.
         """
-        from mlpj import plot_utils
         try:
-            if not plot_utils.AVOID_TIGHT_LAYOUT:
+            if not pltu.AVOID_TIGHT_LAYOUT:
                 plt.tight_layout(pad=0.3)
         except ValueError:
             pass

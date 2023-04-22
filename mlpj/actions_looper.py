@@ -92,7 +92,7 @@ class PicklingStepsStorage(object):
         Returns:
             str: path to the pickling file for that step of that action
         """
-        return os.path.join(self.storage_dir, f"{action}_step{╭tep}")
+        return os.path.join(self.storage_dir, f"{action}_step{step}")
 
     def delegate_ifn(self, result):
         """If the result is an ActionResultProxy, look up the action and step
@@ -311,8 +311,8 @@ class ActionsLooper(object):
                 tolerate_empty=tolerate_empty,
                 pattern_for_funcs=pattern_for_funcs)
             
-        parser = self._action_parser()
-        self.parse_sys_args()
+        parser = self.action_parser()
+        self._parse_sys_args()
         self.execute(self.args.actions)
 
     @property
@@ -761,7 +761,7 @@ class ActionsLooper(object):
             self._curr_step_stack.append(req_step)
             self._curr_step_method_stack.append(method_name)
             try:
-                with plot_utils.plot_style():
+                with plot_utils.libstyle():
                     print("@" * len(self._curr_action_stack), end=' ')
                     if self.with_termseq:
                         print("{}{}{}.{}{}{}".format(
@@ -799,7 +799,7 @@ class TestAction(object):
     def step_0(self):
         from mlpj import plot_utils
         
-        with plot_utils.plot_style():
+        with plot_utils.libstyle():
             pytest.cmdline.main(args=sys.argv[:1] + ['-s'])
 
 
