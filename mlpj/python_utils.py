@@ -32,6 +32,23 @@ def wi_perc(n, n_all):
     return n, n / n_all * 100.
 
 
+def first_of_each_item(items):
+    """The first subitem of each item in the input
+
+    Args:
+        items (list of indexable objects): input list of items
+    Returns:
+        list of objects: For each item in the input, `item[0]`.
+    
+    >>> first_of_each_item([('a', 3, 9), ('b', 4), ('c',)])
+    ['a', 'b', 'c']
+    >>> first_of_each_item(collections.OrderedDict([('A', 3), ('B', 4)])
+    ...     .items())
+    ['A', 'B']
+    """
+    return [item[0] for item in items]
+
+
 def makedir_unless_exists(dirpath):
     """Create a directory path unless it already exists.
 
