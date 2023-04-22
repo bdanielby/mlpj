@@ -40,6 +40,27 @@ def is_numerical(ser):
     return ser.dtype.kind in "bif"
 
 
+def category_colnames(df, feature_list=None):
+    """The list of columns of category type
+
+    Args:
+        df (`pd.DataFrame`): input dataframe
+        feature_list (list of str, optional): If specified, consider only these
+            columns of the dataframe.
+    Returns:
+        list of str: the category column names
+    """
+    selected = []
+    for colname in df.columns:
+        if df[colname].dtype.name == 'category':
+            selected.append(colname)
+    if feature_list is not None:
+        selected = set(selected)
+        return [feature for feature in feature_list if feature in selected]
+    else:
+        return selected
+
+    
 def rename_column(X, old_name, new_name):
     """Rename a column in the passed dataframe (in place).
 
@@ -162,6 +183,19 @@ def sort(X, colnames=None, inplace=False, kind='stable', ascending=True):
     if not inplace:
         X = X1
     return X
+
+
+def sorted_unique_1dim(ser):
+    """The sorted series of unique values within the given series or index.
+
+    Args:
+        ser (`pd.Series` | `pd.Index`): input series or index
+    Returns:
+        `pd.Series`: unique values of the original series as a series with the
+            original name
+    """
+    arr = np.unique(ser.values)
+    return pd.Series(arr, name=ser.name)
 
 
 def left_merge(left, right, **kwargs):
@@ -578,3 +612,32 @@ def to_csv(df, filepath, **kwargs):
     kwargs.setdefault('index', False)
     kwargs.setdefault('encoding', 'utf-8')
     df.to_csv(filepath, **kwargs)
+
+
+def ts_train_test_split(df, train_test_split_date, date_colname, target_colname):
+    """Train-test split for timeseries data
+
+    All data before the `train_test_split_date` is taken as training data,
+    the data starting from that time is taken as test data.
+
+    Args:
+        df (`pd.DataFrame`): input dataframe
+        train_test_split_date (str or `datetime.datetime`): train-test split
+            date; must be convertible with `pd.to_datetime`.
+        date_colname (str): column name with the date or datetime values to
+            compare
+        target_colname (str): the target column name to return as extra arrays;
+            it isn't removed from X-matrix
+    Returns:
+        `X_train, y_train, X_test, y_test`
+    """
+    condition = df[date_colname] < pd.to_datetime(train_test_split_date)
+    
+    X_train = df[condition].copy()
+    y_train = X_train[target_colname]
+    X_test = df[~condition].copy()
+    y_test = X_test[target_colname]
+
+    return X_train, y_train, X_test, y_test
+
+

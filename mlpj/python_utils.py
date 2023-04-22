@@ -275,3 +275,13 @@ def n_days_ago(n_days):
         `datetime.datetime`: datetime object for that day in the past
     """
     return datetime.date.today() - datetime.timedelta(n_days)
+
+
+def today_isoformat():
+    """Today in ISO date format
+
+    Returns:
+        str: in ISO date format
+    """
+    return datetime.date.today().isoformat()
+

@@ -150,12 +150,20 @@ class Manager(object):
         print(f'{remark}{link_text}')
         return filepath
 
-    def get_analysis_pdf_filepath(name, iteration=-1):
+    def get_analysis_pdf_filepath(self, model_name, iteration=-1):
+        """Filepath to save a Cyclic Boosting analysis PDF in.
+        
+        Args:
+            model_name (str): model name
+            iteration (int): Cyclic Boosting iteration
+        Returns:
+            str: filepath in the image directory
+        """
         if iteration == -1:
             suffix = ""
         else:
             suffix = f"_{iteration}"
-        return os.path.join(self.image_path, f"{name}{suffix}.pdf")
+        return os.path.join(self.image_path, f"{model_name}{suffix}.pdf")
     
     def get_keys(self):
         """delegates to `result_display.HTMLDisplay.get_keys`"""
