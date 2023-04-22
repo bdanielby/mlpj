@@ -9,6 +9,19 @@ import contextlib
 import tempfile
 
 
+def all_except(seq, omissions):
+    """All entries of a list except the one mentioned in `omissions`.
+
+    Args:
+        seq (seq): sequence of objects
+        omissions (seq): sequence of omissions
+    Returns:
+        list of remaining objects
+    """
+    omissions = set(omissions)
+    return [entry for entry in seq if entry not in omissions]
+
+
 def isstring(s):
     """Is the argument a string?
 

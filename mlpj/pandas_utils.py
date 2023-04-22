@@ -7,9 +7,33 @@ import collections
 
 import numpy as np
 import pandas as pd
+import pandas.testing as pd_testing
 import numba
 
 from . import python_utils as pu
+
+
+def from_items(items, index=None):
+    """Convert a sequence of (key, value) pairs to a DataFrame.
+
+    This is similar to `pandas.DataFrame.from_items`, but with support for
+    the `index` argument.
+
+    In contrast to the `pandas.DataFrame` constructor using dictionaries,
+    the order of the columns in the resulting dataframe will be as specified
+    in the ``items`` argument.
+
+    Args:
+        items (seq of key-value pairs): Keys are the column names. Values
+            should be array-like. All arrays have to be of equal length.
+        index (array-like, optional): index to use for resulting dataframe.
+            Will default to `np.arange()` if no indexing information is
+            part of input data and no index is provided, see `pd.DataFrame`.
+    """
+    dframe = pd.DataFrame.from_dict(collections.OrderedDict(items))
+    if index is not None:
+        dframe.index = index
+    return dframe
 
 
 @contextlib.contextmanager
@@ -38,6 +62,36 @@ def is_numerical(ser):
       bool: whether the series can be used for numerical purposes
     """
     return ser.dtype.kind in "bif"
+
+
+def get_colnames(X_or_names):
+    """Get columns from an object carrying column names
+    
+    Args:
+        X_or_names (`pd.DataFrame` or `DataFrameGroupBy` or seq of str):
+            input carrying column names
+    Returns:
+        list of str: list of column names
+    """
+    if isinstance(X_or_names, pd.DataFrame):
+        return X_or_names.columns
+    elif isinstance(X_or_names, pd.core.groupby.DataFrameGroupBy):
+        return X_or_names.obj.columns
+    else:
+        return X_or_names
+
+
+def all_colnames_except(X_or_names, colnames):
+    """All column names except the ones given in `colnames`.
+
+    Args:
+        X_or_names (`pd.DataFrame` or `DataFrameGroupBy` or seq of str):
+            input carrying column names
+        colnames (str or seq of str): column names to exclude
+    Returns:
+        list of str: remaining column names
+    """
+    return pu.all_except(get_colnames(X_or_names), colname_list(colnames))
 
 
 def category_colnames(df, feature_list=None):
@@ -73,7 +127,7 @@ def rename_column(X, old_name, new_name):
         `ValueError` if the `old_name` isn't found among the columns.
     """
     if old_name not in X.columns:
-        raise ValueError('column {} not found'.format(old_name))
+        raise KeyError('column {} not found'.format(old_name))
     X.rename(columns={old_name: new_name}, inplace=True)
 
     
@@ -119,6 +173,36 @@ def columns_to_right(df, colnames):
     colnames = colname_list(colnames)
     colnames_set = set(colnames)
     return df[[colname for colname in df.columns if colname not in colnames_set] + colnames]
+
+
+def shuffle_df_drop_index(df):
+    """Shuffle the rows of a dataframe and drop the index.
+
+    Args:
+        df (`pd.DataFrame`): input dataframe
+    Returns:
+        `pd.DataFrame`: new dataframe
+    """
+    import sklearn.utils
+    
+    df = sklearn.utils.shuffle(df)
+    drop_index(df)
+    return df
+
+
+def assert_frame_contents_equal(df1, df2, **kwargs):
+    """Convenience function to assert that the contents of two datframes is
+    equal.
+
+    That is, the indices of the dataframes are ignored.
+
+    Args:
+        df1 (`pd.DataFrame`): first input dataframe
+        df2 (`pd.DataFrame`): second input dataframe
+        kwargs: See `pd.testing.assert_frame_equal`.
+    """
+    pd_testing.assert_frame_equal(
+        df1.reset_index(drop=True), df2.reset_index(drop=True), **kwargs)
 
         
 def ser_where_defined(ser):

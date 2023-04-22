@@ -11,16 +11,6 @@ def anynan(x):
         x (array-like): input array
     Returns:
         bool: whether any NaNs were found
-
-    **Example**
-
-    >>> x = np.array([np.NaN, 0, 1, 10 ,14])
-    >>> from pjml.numpy_utils import anynan
-    >>> anynan(x)
-    True
-    >>> x = np.array([6, 0, 1, 10 ,14])
-    >>> anynan(x)
-    False
     """
     return np.isnan(x).any()
 
@@ -43,15 +33,6 @@ def digitize(x, bins):
     Raises:
         ValueError: If the input is not 1-dimensional, or if `bins` is not monotonic.
         TypeError: If the type of the input is complex.
-
-    Examples:
-
-    >>> x = np.array([-1000, -0.2, 0.2, 6.4, 3.0, 10, 11, 1000])
-    >>> bins = np.array([0.0, 1.0, 2.5, 4.0, 10.0])
-    >>> from pjml.numpy_utils import digitize
-    >>> inds = digitize(x, bins)
-    >>> inds
-    array([0, 0, 1, 4, 3, 4, 4, 4])
     """
     bin_numbers = np.digitize(x, bins)
     is_max = x >= bins.max()

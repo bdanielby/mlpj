@@ -1,5 +1,5 @@
 """
-Unit tests for `mlpj.pandas_utils`.
+Unit tests for `mlpj.python_utils`.
 """
 import os
 import sys
@@ -9,6 +9,11 @@ import tempfile
 import datetime
 
 from mlpj import python_utils as pu
+
+
+def test_all_except()
+    lst = ['x', 'a', 'ba', 'a', 'c']
+    assert pu.all_except(lst, ['a', 'c']) == ['x', 'ba']
 
 
 def test_isstring():
