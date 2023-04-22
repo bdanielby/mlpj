@@ -1,23 +1,14 @@
 """
-Utilities and convenience functions for using `numpy`.
+Utilities and convenience functions for using `pandas`.
 """
+import re
 import contextlib
 
 import numpy as np
 import pandas as pd
 import numba
 
-
-def is_numerical(ser):
-    """Does a series contain numerical values?
-
-    Args:
-      ser (pd.Series): input series
-
-    Returns:
-      bool: whether the series can be used for numerical purposes
-    """
-    return ser.dtype.kind in "bif"
+from . import python_utils as pu
 
 
 @contextlib.contextmanager
@@ -34,6 +25,18 @@ def wide_display(width=250, max_columns=75, max_rows=500):
                            "display.max_rows", max_rows,
                            'max_colwidth', 80):
         yield
+
+
+def is_numerical(ser):
+    """Does a series contain numerical values?
+
+    Args:
+      ser (pd.Series): input series
+
+    Returns:
+      bool: whether the series can be used for numerical purposes
+    """
+    return ser.dtype.kind in "bif"
 
 
 def print_column_info(col, table_name=None, ignored_columns=(), n_value_counts=50):
@@ -100,3 +103,15 @@ def print_table_info(df, table_name, ignored_columns=(), n_value_counts=50):
         print_column_info(
             df[colname], table_name=table_name, ignored_columns=ignored_columns,
             n_value_counts=n_value_counts)
+
+
+def n_undefined_and_percentage(ser):
+    """Number of undefined values and their percentage
+
+    Args:
+       ser (`pd.Series`): input series
+    Returns:
+       n, perc: the number of undefined values in the series and their
+           percentage (scaled to 100)
+    """
+    return pu.wi_perc(ser.isnull().sum(), len(ser))

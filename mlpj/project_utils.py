@@ -10,8 +10,8 @@ import random
 
 import numpy as np
 
-from mlpj import python_utils as pu
-from mlpj import result_display, actions_looper
+from . import python_utils as pu
+from . import result_display, actions_looper
 
 
 class Manager(object):

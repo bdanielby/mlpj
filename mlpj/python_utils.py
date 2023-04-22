@@ -6,6 +6,30 @@ import sys
 import sqlite3
 import datetime
 import contextlib
+import tempfile
+
+
+def isstring(s):
+    """Is the argument a string?
+
+    Args:
+        s: object
+    Returns:
+        bool: whether it is of type `str` or `bytes`
+    """
+    return isinstance(s, (str, bytes))
+
+
+def wi_perc(n, n_all):
+    """Return n and the percentage of n in `n_all`.
+
+    Args:
+        n (int): count of items with a some feature
+        n_all (int): total count
+    Returns:
+        n, perc: The original number and the percentage (scaled to 100)
+    """
+    return n, n / n_all * 100.
 
 
 def makedir_unless_exists(dirpath):
@@ -16,6 +40,39 @@ def makedir_unless_exists(dirpath):
     """
     if not os.path.isdir(dirpath):
         os.makedirs(dirpath)
+
+
+def make_path_relative_to(filepath, reference_path):
+    """Make a filepath relative to a given reference path.
+
+    This is needed for HTML links to images, for example.
+
+    Args:
+        filepath (str): input filepath
+        reference_path (str): reference filepath
+    Returns:
+        str: relative filepath as seen from the reference filepath
+    
+    >>> make_path_relative_to('/ab/cd/d/e', '/ab/cd')
+    'd/e'
+    >>> make_path_relative_to('/ab/cd/d/e', '/ab/cd/d2')
+    '../d/e'
+    >>> make_path_relative_to('/abd/cd/d/e', '/ab/cd/d2')
+    '../../../abd/cd/d/e'
+
+    >>> make_path_relative_to('/ab//cd//d/e/', '/ab//cd/')
+    'd/e'
+    >>> make_path_relative_to('/ab//cd//d/e/', '/ab//cd//d2')
+    '../d/e'
+    """
+    parts = os.path.normpath(filepath).split(os.path.sep)
+    parts_ref = os.path.normpath(reference_path).split(os.path.sep)
+    n_ref = len(parts_ref)
+    i = 0
+    for i, part in enumerate(parts):
+        if i >= n_ref or part != parts_ref[i]:
+            break
+    return os.path.join(*(['..'] * (n_ref - i) + parts[i:]))
 
 
 @contextlib.contextmanager
@@ -45,16 +102,61 @@ def redirect_stdouterr(outfp, errfp):
         sys.stderr = old_stderr
 
         
-def isstring(s):
-    """Is the argument a string?
+class BranchedOutputStreams:
+    """Output stream that delegates to multiple other output streams
 
     Args:
-        s: object
-    Returns:
-        bool: whether it is of type `str` or `bytes`
+        streams (seq of output streams): output streams to delegate to
     """
-    return isinstance(s, (str, bytes))
+    def __init__(self, streams):
+        self.streams = streams
 
+    def write(self, message):
+        """Write a message to all output streams.
+
+        Args:
+            message (str): message to write
+        """
+        for stream in self.streams:
+            stream.write(message)
+
+    def flush(self):
+        """Flush all output streams."""
+        for stream in self.streams:
+            stream.flush()
+
+    def close(self):
+        """Close all output streams."""
+        for stream in self.streams:
+            stream.close()
+
+        
+@contextlib.contextmanager
+def open_overwriting_safely(filepath, mode):
+    """Open a temporary file and rename it in the end.
+
+    Instead of overwriting the given file directly, open a temporary file
+    in the same directory, write into it and rename the temporary file to the
+    given filepath in the end.
+
+    This way, if an exception occurs, the original file contents is preserved.
+
+    Args:
+        filepath (str): filepath to create / overwrite in the end
+        mode (int): See `tempfile.NamedTemporaryFile`.
+    """
+    filepath_tmp = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode=mode, delete=False, dir=os.path.dirname(filepath)
+        ) as fout:
+            filepath_tmp = fout.name
+            yield fout
+        os.rename(filepath_tmp, filepath)
+        filepath_tmp = None
+    finally:
+        if filepath_tmp is not None and os.path.exists(filepath_tmp):
+            os.remove(filepath_tmp)
 
 
 def ansiicol(color_num, is_bright=False):

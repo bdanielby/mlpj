@@ -17,9 +17,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import lockfile
 
-from mlpj import pandas_utils as pdu
-from mlpj import python_utils as pu
-from mlpj import plot_utils as pltu
+from . import pandas_utils as pdu
+from . import python_utils as pu
+from . import plot_utils as pltu
 
 
 class HTMLDisplay(object):
@@ -212,15 +212,14 @@ class HTMLDisplay(object):
             plt.figure(1, figsize=figsize)
 
         if with_printer:
-            out = pu.StringIOToleratingStr()
+            out = io.StringIO()
             branched = pu.BranchedOutputStreams((out, sys.stdout))
             with pu.redirect_stdouterr(branched, branched):
                 with pdu.wide_display():
                     try:
                         if tool == 'matplotlib':
                             if with_libstyle:
-                                from mlpj import plots
-                                with plots.libstyle():
+                                with pltu.libstyle():
                                     yield plot_filepath
                             else:
                                 yield plot_filepath
@@ -235,8 +234,7 @@ class HTMLDisplay(object):
             #    self._plot_in_r(plot_filepath, pixelsize_args)
             if tool == 'matplotlib':
                 if with_libstyle:
-                    from mlpj import plots
-                    with plots.libstyle():
+                    with pltu.libstyle():
                         yield plot_filepath
                 else:
                     yield plot_filepath
@@ -451,11 +449,8 @@ class HTMLDisplay(object):
         return key, plot_filepath
 
     def _tight_layout(self):
-        """Call `plt.tight_layout` unless this is turned off by
-        `plot_utils.AVOID_TIGHT_LAYOUT`.
-        """
+        """Call `plt.tight_layout` and catch `ValueError`s."""
         try:
-            if not pltu.AVOID_TIGHT_LAYOUT:
-                plt.tight_layout(pad=0.3)
+            plt.tight_layout(pad=0.3)
         except ValueError:
             pass

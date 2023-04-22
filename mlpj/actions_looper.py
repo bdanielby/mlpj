@@ -68,7 +68,8 @@ import pickle
 import inspect
 import types
 
-from mlpj import python_utils as pu
+from . import python_utils as pu
+from . import plot_utils as pltu
 
 
 class PicklingStepsStorage(object):
@@ -745,8 +746,6 @@ class ActionsLooper(object):
             step_methods (dict): mapping step number to method name
             req_steps (sequence of int): requested step numbers
         """
-        from mlpj import plot_utils
-
         action = self.curr_action
         # Since a requested step can be mentioned multiple times and in any
         #   order, we must first read the required results and then loop
@@ -761,7 +760,7 @@ class ActionsLooper(object):
             self._curr_step_stack.append(req_step)
             self._curr_step_method_stack.append(method_name)
             try:
-                with plot_utils.libstyle():
+                with pltu.libstyle():
                     print("@" * len(self._curr_action_stack), end=' ')
                     if self.with_termseq:
                         print("{}{}{}.{}{}{}".format(
@@ -797,9 +796,7 @@ class TestAction(object):
     the command line
     """
     def step_0(self):
-        from mlpj import plot_utils
-        
-        with plot_utils.libstyle():
+        with pltu.libstyle():
             pytest.cmdline.main(args=sys.argv[:1] + ['-s'])
 
 

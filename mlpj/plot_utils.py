@@ -9,6 +9,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from matplotlib import gridspec
+
+from . import numpy_utils as npu
+from . import pandas_utils as pdu
 
 
 LOWER_1_SIGMA_QUANTILE = (1. - 0.6827) / 2
@@ -92,7 +96,7 @@ def plot_all_numerical_histograms(pj, df, table_name):
         if pdu.is_numerical(col):
             if col.dtype.kind == 'b':
                 col = col.astype(np.intp)
-            for _ in project.savefig(f"{table_name}_{colname}_histogram"):
+            with pj.savefig(f"{table_name}_{colname}_histogram"):
                 histogram_of_col(col)
 
                 
@@ -493,13 +497,13 @@ def _calc_statistics(x, y, errorbars):
     """Calculate means, medians, errors, counts for each bin.
     
     Args:
-        x (series-like): x-values
+        x (series-like): binned x-values
         y (series-like): y-values
         errorbars (str): See the same param in `profile_plot`.
     Returns:
         arrays: means, medians, errors, counts
     """
-    groupby = pdu.groupby(pd.Series(y), x)
+    groupby = pd.Series(y).groupby(x)
     means = groupby.mean()
     medians = groupby.median()
     counts = groupby.size()
@@ -550,8 +554,8 @@ def _profile_plot_discrete(x, y, errorbars, with_median=True):
         xmin = 0
         xmax = len(means) + 0.5
         plt.xlim(xmin, xmax)
-        _plot_results(bin_centers, means.values, medians.values,
-                      np.asarray(errors), errorbars, with_median=with_median)
+        _plot_bin_results(bin_centers, means.values, medians.values,
+                          np.asarray(errors), errorbars, with_median=with_median)
         return bin_boundaries, np.asarray(counts)
 
 
@@ -629,8 +633,8 @@ def _profile_plot_continuous(x, y, nbins, equal_n_datapoints, n_ticks,
         bin_centers = bin_centers[
             np.where(~np.isnan(means.reindex(np.arange(1, nbins + 1))))]
         assert len(means) == len(bin_centers)
-        _plot_results(bin_centers, means.values, medians.values,
-                      np.asarray(errors), errorbars, with_median=with_median)
+        _plot_bin_results(bin_centers, means.values, medians.values,
+                          np.asarray(errors), errorbars, with_median=with_median)
         counts = counts.reindex(np.arange(1, nbins + 1))
         counts = counts.fillna(0)
     
@@ -706,3 +710,40 @@ def _set_yticks_and_labels(axis, y_ticks, y_ticklabels):
         y_ticks = axis.get_yticks()
     axis.set_yticks(y_ticks)
     axis.set_yticklabels(y_ticklabels)
+
+
+def _plot_bin_results(x, means, medians, errors, errorbars, with_median=True):
+    """Plot results for each bin
+
+    Args:
+        x (array-like, shape `(n,)): binned x-values
+        means (array-like, shape `(n,)): mean of y for each x-bin
+        medians (array-like, shape `(n,)): median of y for each x-bin
+        errors (array-like, shape `(n, 4)): boundaries of 1-sigma and 2-sigma
+            error bars of y for each x-bin
+        errorbars ('binomial' | 'quantile' | None): See `profile_plot`
+        with_median (bool): If True, the medians are plotted.
+    """
+    pmean, = plt.plot(x, means, 'o-', color='b')
+    if with_median:
+        pmedian, = plt.plot(x, medians, 'o', color='g')
+    ylim = plt.ylim()
+    if errors is not None:
+        if errorbars == 'quantile':
+            plt.errorbar(x, medians,
+                         yerr=[-errors[2], errors[3]], fmt="none",
+                         ecolor='gold', capsize=2.5)
+            plt.errorbar(x, medians,
+                         yerr=[-errors[0], errors[1]], fmt="none", ecolor='g',
+                         capsize=2.5)
+        elif errorbars == 'mean':
+            plt.errorbar(x, means.values,
+                         yerr=[-errors[0], errors[1]], fmt="-", ecolor='k',
+                         capsize=2.5)
+        else:
+            plt.errorbar(x, means, yerr=errors,
+                         fmt="o", ecolor='b', capsize=2.5)
+
+    if with_median:
+        plt.legend([pmean, pmedian], ["mean", "median"], loc=0)
+    plt.ylim(ylim)
