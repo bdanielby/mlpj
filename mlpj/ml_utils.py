@@ -133,6 +133,27 @@ def create_ordinal_encoder(df, used_features):
         handle_missing='return_nan', handle_unknown='return_nan')
 
 
+def create_target_encoder(df, used_features, min_samples_leaf=20):
+    """TargetEncoder acting on all categorical features
+
+    Args:
+        df (`pd.DataFrame`): input dataframe
+        used_features (list of str): columns in `X` to pass as features
+        The rest of the params are hyperparams of
+        `category_encoders.TargetEncoder`.
+    Returns:
+        `category_encoders.TargetEncoder` for the categorical features
+
+    This function introduces a new dependency: `category_encoders`.
+    """
+    from category_encoders import TargetEncoder
+
+    return TargetEncoder(
+        cols=pdu.category_colnames(df, feature_list=used_features),
+        handle_missing='return_nan', handle_unknown='return_nan',
+        min_samples_leaf=min_samples_leaf)
+
+
 class OnCols(sklearn.base.BaseEstimator, sklearn.base.ClassifierMixin,
          sklearn.base.RegressorMixin, sklearn.base.TransformerMixin
 ):
