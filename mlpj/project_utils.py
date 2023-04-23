@@ -144,7 +144,7 @@ class Manager(object):
             str: filepath in the image directory
         """
         filepath = os.path.join(self.image_path, filename)
-        link_text = self.display.link_text(filepath)
+        link_text = self.display.link_text(filepath, link_text=filename)
         print(f'{remark}{link_text}')
         return filepath
 
@@ -175,6 +175,9 @@ class Manager(object):
         """delegates to `result_display.HTMLDisplay.del_keys_like`"""
         return self.display.del_keys_like(regex)
 
+    def get_findings(self):
+        """delegates to `result_display.HTMLDisplay.db_findings"""
+        return self.display.get_findings()
     
     def generate_htmlpage(self, *args, **kwargs):
         """delegates to `result_display.HTMLDisplay.generate_htmlpage`"""

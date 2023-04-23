@@ -264,7 +264,7 @@ class HTMLDisplay(object):
               {refresh_millisec});
             </script>
             """
-        contents = (f'<img src="{path}" id={key}><pre>{description}</pre>'
+        contents = (f'<img src="{path}"><pre>{description}</pre>'
                     f'{refresh_code}')
             
         self.add_db_entry(key, contents)
@@ -356,6 +356,17 @@ class HTMLDisplay(object):
                 selected_keys.append(key)
         self.del_keys(selected_keys)
         
+    def get_findings(self):
+        """Get the contents of the findings table in the database,
+        reverse-ordered by timestamp.
+        
+        Returns:
+            list of tuples: rows of the database table
+        """
+        with pu.sqlite3_conn(self.db_path) as (db, cursor):
+            return list(cursor.execute(
+                'select * from findings order by timestamp desc'))
+
     def _init_db_if_necessary(self):
         """Create the Sqlite3 database file and the table "findings" in it
         unless they already exist.
