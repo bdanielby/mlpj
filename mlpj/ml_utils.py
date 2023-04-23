@@ -54,7 +54,7 @@ def find_cls_in_sklearn_obj(est_or_trans, cls):
         return res
         
 
-def create_cyclic_boosting_plots(pj, est, model_name):
+def cyclic_boosting_analysis(pj, est, model_name):
     """Create the analysis plots for a trained Cyclic Boosting model based on
     the plot observers in the estimator.
 
