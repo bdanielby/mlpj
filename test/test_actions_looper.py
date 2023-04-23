@@ -25,7 +25,7 @@ def contents_of_defaultdict(dic):
 class ClassExample:
     """Example for an action implemented as a class
 
-    Each step traces its calls in the class atribute `interim_results`.
+    Each step traces its calls in the class attribute `interim_results`.
     """
     interim_results = collections.defaultdict(list)
 
@@ -125,9 +125,6 @@ class ObjExample:
 
     def step_10(self, res0, res2):
         self.interim_results[10].append(f"10:{res0},{res2}")
-
-    def reset(self):
-        self.interim_results.clear()
 
     def contents(self):
         return contents_of_defaultdict(self.interim_results)
@@ -346,6 +343,8 @@ def test_ActionResultProxy():
         ClassExample.reset()
         pj.add_available(ClassExample)
         
-        pj.execute("ClassExample ..1 fct_example ..1")
-        assert ClassExample.contents() == [(0, ['0']), (1, ['1:init'])]
+        pj.execute("ClassExample ..5 fct_example ..1")
+        assert ClassExample.contents() == [
+            (0, ['0']), (1, ['1:init']), (5, ['5:init'])
+        ]
         assert contents() == [(0, ['0']), (1, ['1:init'])]
