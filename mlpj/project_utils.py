@@ -59,7 +59,7 @@ class Manager(object):
     
     def as_action(self, *args, **kwargs):
         """delegates to `actions_looper.ActionsLooper.action`"""
-        return self.actions_looper.action(*args, **kwargs)
+        return self.actions_looper.as_action(*args, **kwargs)
 
     def add_available(self, *args, **kwargs):
         """delegates to `actions_looper.ActionsLooper.add_available`"""

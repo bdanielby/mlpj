@@ -1,7 +1,7 @@
 # mlpj: Tools for machine learning projects
 
 Contents of this repository:
-* Utilities and convenience functions for various Python libraries:
+* Utilities and convenience functions for various libraries and purposes:
   * [python_utils](mlpj/python_utils.py): for the Python standard library
   * [numpy_utils](mlpj/numpy_utils.py): for `numpy`
   * [pandas_utils](mlpj/pandas_utils.py): for `pandas`
