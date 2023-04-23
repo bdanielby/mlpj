@@ -6,6 +6,7 @@ import re
 import collections
 import os
 
+import numpy as np
 import pandas as pd
 import sklearn.base
 import sklearn.pipeline
@@ -53,23 +54,24 @@ def find_cls_in_sklearn_obj(est_or_trans, cls):
         return res
         
 
-def create_cyclic_boosting_plots(pj, est, name):
-    """Create the analysis plots for Cyclic Boosting based on the plot observers
-    in the estimator.
+def create_cyclic_boosting_plots(pj, est, model_name):
+    """Create the analysis plots for a trained Cyclic Boosting model based on
+    the plot observers in the estimator.
 
     The links to the PDFs are printed. Put this into a call of
     `project_utils.Manager.printer`.
     
     Args:
         pj (`project_utils.Manager`): project manager object
-        est (`sklearn.Estimator`): Scikit-learn-style estimator
-        name (str): model name
+        est (`sklearn.Estimator`): Scikit-learn-style estimator containing a
+            Cyclic Boosting model
+        model_name (str): model name
 
-    This function introduces a new dependency: `cyclic_boosting`.
+    Using this function introduces a new dependency: `cyclic_boosting`.
     """
     import cyclic_boosting
     import cyclic_boosting.plots
-    from  cyclic_boosting import binning
+    from cyclic_boosting import binning
 
     binner = find_cls_in_sklearn_obj(est, binning.BinNumberTransformer)
     cb_est = find_cls_in_sklearn_obj(
@@ -82,7 +84,7 @@ def create_cyclic_boosting_plots(pj, est, name):
             remark = " for the last iteration"
         else:
             remark = f" for iteration {iteration}"
-        filepath = pj.get_analysis_pdf_filepath(name, iteration=iteration)
+        filepath = pj.get_analysis_pdf_filepath(model_name, iteration=iteration)
         filepath_wo_ext = re.sub(r'(?i)\.pdf$', '', filepath)
         cyclic_boosting.plots.plot_analysis(
             plot_observer=plob, file_obj=filepath_wo_ext, use_tightlayout=False,
@@ -92,6 +94,27 @@ def create_cyclic_boosting_plots(pj, est, name):
               f'<a href="../image/{filename}">{filename}</a>')
 
 
+def xgboost_analysis(est, model_name, used_features):
+    """Print analysis information about a trained XGBoost model.
+
+    Args:
+        est (`sklearn.Estimator`): Scikit-learn-style estimator containing an
+            XGBoost model
+        model_name (str): model name
+
+    Using this function introduces a new dependency: `xgboost`.
+    """
+    import xgboost
+    
+    xg_est = find_cls_in_sklearn_obj(est, xgboost.XGBModel)
+        
+    print(f"<h3>feature importances of model {model_name}</h3>")
+    importances = xg_est.feature_importances_
+    ind = np.argsort(importances, kind='stable')[::-1]
+    for i in ind:
+        print(f"{used_features[i]}: {importances[i]:.3f}")    
+
+        
 def get_used_features(feature_properties):
     """Get the column names in the Cyclic Boosting feature properties. They
     are the features used by the model.
@@ -124,7 +147,7 @@ def create_ordinal_encoder(df, used_features):
     Returns:
         `category_encoders.OrdinalEncoder` for the categorical features
 
-    This function introduces a new dependency: `category_encoders`.
+    Using this function introduces a new dependency: `category_encoders`.
     """
     from category_encoders import OrdinalEncoder
 
@@ -144,7 +167,7 @@ def create_target_encoder(df, used_features, min_samples_leaf=20):
     Returns:
         `category_encoders.TargetEncoder` for the categorical features
 
-    This function introduces a new dependency: `category_encoders`.
+    Using this function introduces a new dependency: `category_encoders`.
     """
     from category_encoders import TargetEncoder
 
