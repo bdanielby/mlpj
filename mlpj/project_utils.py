@@ -7,6 +7,8 @@ import os
 import sys
 import re
 import random
+import contextlib
+import tempfile
 
 import numpy as np
 
@@ -52,10 +54,6 @@ class Manager(object):
             os.path.join(self.project_dir, "steps"))
 
         self.actions_looper = actions_looper.ActionsLooper(steps_storage, doc=doc)
-    
-    def as_curr(self, *args, **kwargs):
-        """delegates to `actions_looper.ActionsLooper.curr`"""
-        return self.actions_looper.as_curr(*args, **kwargs)
     
     def as_action(self, *args, **kwargs):
         """delegates to `actions_looper.ActionsLooper.action`"""
@@ -181,3 +179,13 @@ class Manager(object):
     def generate_htmlpage(self, *args, **kwargs):
         """delegates to `result_display.HTMLDisplay.generate_htmlpage`"""
         return self.display.generate_htmlpage(*args, **kwargs)
+
+
+@contextlib.contextmanager
+def temp_project():
+    """Context manager offering a temporary project
+
+    For example for testing purposes.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        yield Manager(tmpdir)

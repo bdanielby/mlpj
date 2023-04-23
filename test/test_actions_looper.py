@@ -1,22 +1,22 @@
 """
 Unit tests for `mlpj.actions_looper`.
 """
-import contextlib
-import tempfile
 import collections
 
 import pytest
 
 from mlpj import project_utils, actions_looper
-
-
-@contextlib.contextmanager
-def temp_project():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        yield project_utils.Manager(tmpdir)
+from mlpj.project_utils import temp_project
 
 
 def contents_of_defaultdict(dic):
+    """Sorted items of a defaultdict
+
+    Args:
+        dic (defualtdict): input dictionary
+    Returns:
+        list: sorted list of items
+    """
     res = list(dic.items())
     res.sort()
     return res
@@ -281,42 +281,6 @@ def test_execute_fct_action():
         assert pj.read_result("fct_example", 5) == "r2"
 
         
-def test_as_curr():
-    interim_results = collections.defaultdict(list)
-
-    def contents():
-        return contents_of_defaultdict(interim_results)
-    
-    with temp_project() as pj:
-        @pj.as_curr
-        def fct_example():
-            """Example for an action implemented as a function.
-    
-            Each step traces its calls in the `defaultdict` `interim_results`.
-            """
-            def step_r0_init():
-                assert pj.curr_action == "curr"
-                assert pj.curr_step == 0
-                assert pj.curr_step_method == "step_r0_init"
-                assert pj.curr_astep == "curr_step_r0_init"
-                interim_results[0].append("0")
-                return "init"
-    
-            def step_1_next(res0):
-                interim_results[1].append(f"1:{res0}")
-    
-            pj.execute_fct_steps(locals())
-    
-        pj.add_available(fct_example)
-        pj.execute("curr ..1")
-        assert contents() == [(0, ['0']), (1, ['1:init'])]
-        
-        pj.execute("curr 1")
-        assert contents() == [(0, ['0']), (1, ['1:init', '1:init'])]
-
-        assert pj.read_result("curr", 0) == "init"
-        
-
 def test_as_action():
     interim_results = collections.defaultdict(list)
 
@@ -328,6 +292,8 @@ def test_as_action():
         def fct_example():
             """Example for an action implemented as a function.
     
+            The decorator renames the action to "myaction".
+            
             Each step traces its calls in the `defaultdict` `interim_results`.
             """
             def step_r0_init():

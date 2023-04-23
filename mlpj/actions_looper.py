@@ -181,18 +181,6 @@ class ActionsLooper(object):
         self._curr_step_specs_stack = []
         self.actions_level = 0
         
-    def as_curr(self, decorated):
-        """Decorator to add the decorated class or function as an available action
-        under the name "curr"
-
-        Args:
-            decorated (class or function): class or function to be decorated
-        Returns:
-            wrapped class or function
-        """
-        self.add_available(decorated, name='curr')
-        return decorated
-
     def as_action(self, name=None):
         """Decorator to add the decorated class or function as an available action.
 
