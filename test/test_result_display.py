@@ -59,7 +59,7 @@ def test_savefig():
             x = np.random.random(size=n)
             y = x * x + 0.1 * np.random.random(size=n)
 
-            pltu.profile_plot(x, y, nbins=30, histogram=None)
+            pltu.profile_plot(x, y, n_bins=30, histogram=None)
             print("profile plot of a noisy x^2")
 
         assert get_keys_and_contents(pj) == [

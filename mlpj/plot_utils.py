@@ -263,7 +263,7 @@ def histogram_plot(bin_contents, bin_boundaries, yscale='linear',
             plt.setp(labels, rotation=70)
     
     
-def profile_plot(x, y, nbins=100, equal_n_datapoints=False, n_ticks=10,
+def profile_plot(x, y, n_bins=100, equal_n_datapoints=False, n_ticks=10,
                is_continuous_x=True, errorbars='quantile', histogram='linear',
                density=None, with_median=True):
     """Profile plot of one column versus another.
@@ -276,7 +276,7 @@ def profile_plot(x, y, nbins=100, equal_n_datapoints=False, n_ticks=10,
     Args:
         x (series-like): x values
         y (series-like): y values
-        nbins (int): number of bins
+        n_bins (int): number of bins
         equal_n_datapoints (bool): If `True`, `n_bins` bins with approximately
             equal number of data points are chosen instead of equidistant
             bins.
@@ -358,7 +358,7 @@ def profile_plot(x, y, nbins=100, equal_n_datapoints=False, n_ticks=10,
         if is_continuous_x:
             plt.grid(True)
             bins, counts = _profile_plot_continuous(
-                x, y, nbins, equal_n_datapoints, n_ticks, errorbars=errorbars,
+                x, y, n_bins, equal_n_datapoints, n_ticks, errorbars=errorbars,
                 with_median=with_median)
         else:
             bins, counts = _profile_plot_discrete(x, y, errorbars=errorbars,
@@ -416,7 +416,7 @@ def profile_plot(x, y, nbins=100, equal_n_datapoints=False, n_ticks=10,
     
         if histogram_y is not None:
             plt.sca(axes_right)
-            counts, bins = np.histogram(y, bins=nbins)
+            counts, bins = np.histogram(y, bins=n_bins)
             histogram_plot(counts, bins, yscale=histogram_y,
                            orientation='horizontal')
             if not all([label == '' for label in y_labels]):
@@ -436,7 +436,7 @@ def profile_plot(x, y, nbins=100, equal_n_datapoints=False, n_ticks=10,
 
 
 def diagonal_plot_for_prediction(
-        pred, y, nbins=100, n_ticks=10, errorbars='quantile',
+        pred, y, n_bins=100, n_ticks=10, errorbars='quantile',
         xlabel="Prediction", ylabel="Truth", histogram='linear',
         with_median=True
 ):
@@ -458,7 +458,7 @@ def diagonal_plot_for_prediction(
             In the classifier case the probability predictions for the target
             (in `sklearn` the second column of `predict_proba`)
         y (series-like): true values of the target
-        nbins (int): number of bins
+        n_bins (int): number of bins
         n_ticks (int, optional): For `equal_n_datapoints`, this is the number of
              ticks displayed. If None, each bin has its own tick.
         errorbars ('binomial' | 'quantile' | None): Display the errorbars
@@ -482,7 +482,7 @@ def diagonal_plot_for_prediction(
         with_median (bool): If True, the medians are plotted as green dots.
     """
     with libstyle():
-        profile_plot(pred, y, nbins=nbins, n_ticks=n_ticks, is_continuous_x=True,
+        profile_plot(pred, y, n_bins=n_bins, n_ticks=n_ticks, is_continuous_x=True,
                      errorbars=errorbars, histogram=histogram,
                      with_median=with_median)
         # Draw the diagonal line:
@@ -599,7 +599,7 @@ def _reduce_xticks(locations, labels, n_ticks):
     return chosen_locations, chosen_labels
 
 
-def _profile_plot_continuous(x, y, nbins, equal_n_datapoints, n_ticks,
+def _profile_plot_continuous(x, y, n_bins, equal_n_datapoints, n_ticks,
                            errorbars, with_median=True):
     """Profile plot implementation for continuous x-values.
 
@@ -608,7 +608,7 @@ def _profile_plot_continuous(x, y, nbins, equal_n_datapoints, n_ticks,
     """
     with libstyle():
         if equal_n_datapoints:
-            bin_boundaries = npu.bins_equal_n_datapoints(x, nbins)
+            bin_boundaries = npu.bins_equal_n_datapoints(x, n_bins)
             equally_spaced_bin_boundaries = np.arange(len(bin_boundaries))
             bin_centers = 0.5 * (
                 equally_spaced_bin_boundaries[:-1] +
@@ -620,7 +620,7 @@ def _profile_plot_continuous(x, y, nbins, equal_n_datapoints, n_ticks,
             plt.xticks(locations, labels, rotation=70)
         else:
             minx, maxx = np.min(x), np.max(x)
-            bin_boundaries = np.linspace(minx, maxx, nbins + 1)
+            bin_boundaries = np.linspace(minx, maxx, n_bins + 1)
             bin_centers = 0.5 * (bin_boundaries[1:] +
                                  bin_boundaries[:-1])
     
@@ -631,11 +631,11 @@ def _profile_plot_continuous(x, y, nbins, equal_n_datapoints, n_ticks,
         means, medians, errors, counts = _calc_statistics(
             bin_numbers, y, errorbars)
         bin_centers = bin_centers[
-            np.where(~np.isnan(means.reindex(np.arange(1, nbins + 1))))]
+            np.where(~np.isnan(means.reindex(np.arange(1, n_bins + 1))))]
         assert len(means) == len(bin_centers)
         _plot_bin_results(bin_centers, means.values, medians.values,
                           np.asarray(errors), errorbars, with_median=with_median)
-        counts = counts.reindex(np.arange(1, nbins + 1))
+        counts = counts.reindex(np.arange(1, n_bins + 1))
         counts = counts.fillna(0)
     
         plt.xlim([2 * bin_boundaries[0] - bin_centers[0],
