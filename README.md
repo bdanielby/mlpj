@@ -1,5 +1,9 @@
 # mlpj: Tools for machine learning projects
 
+Installation of the [PyPi package](https://pypi.org/project/mlpj):
+
+  `pip install -U mlpj`
+
 Contents of this repository:
 * Utilities and convenience functions for various libraries and purposes:
   * [python_utils](mlpj/python_utils.py): for the Python standard library
