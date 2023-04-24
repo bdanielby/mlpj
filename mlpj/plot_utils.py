@@ -724,6 +724,11 @@ def _plot_bin_results(x, means, medians, errors, errorbars, with_median=True):
         errorbars ('binomial' | 'quantile' | None): See `profile_plot`
         with_median (bool): If True, the medians are plotted.
     """
+    ylim = means.min(), means.max()
+    if with_median:
+        ylim = np.minimum(ylim[0], medians.min()), np.maximum(ylim[1], medians.max())
+    plt.ylim(ylim)
+    
     if errors is not None:
         if errorbars == 'quantile':
             plt.errorbar(x, medians,
@@ -741,11 +746,7 @@ def _plot_bin_results(x, means, medians, errors, errorbars, with_median=True):
                          fmt="o", ecolor='b', capsize=2.5)
 
     pmean, = plt.plot(x, means, 'o-', color='b')
-    ylim = means.min(), means.max()
-    if with_median:
-        pmedian, = plt.plot(x, medians, 'o', color='g')
-        ylim = np.minimum(ylim[0], medians.min()), np.maximum(ylim[1], medians.max())
     
     if with_median:
+        pmedian, = plt.plot(x, medians, 'o', color='g')
         plt.legend([pmean, pmedian], ["mean", "median"], loc=0)
-    plt.ylim(ylim)
