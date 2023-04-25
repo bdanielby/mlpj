@@ -7,6 +7,7 @@ import sqlite3
 import datetime
 import contextlib
 import tempfile
+import logging
 
 
 def all_except(seq, omissions):
@@ -280,3 +281,21 @@ def today_isoformat():
     """
     return datetime.date.today().isoformat()
 
+
+def create_console_logger(module, level=logging.DEBUG):
+    """Create a default console logger for a given module.
+
+    Args:
+        module (str): module name
+        level (int): logging level
+    Returns:
+        `logging.Logger`
+    """
+    logger = logging.getLogger(module)
+    logger.setLevel(level)
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s"))
+    logger.addHandler(handler)
+
+    return logger

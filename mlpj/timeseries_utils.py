@@ -7,12 +7,12 @@ from . import python_utils as pu
 
 
 def remove_last_n_days(df, datetime_colname, n_days):
-    """Remove the last n_days days from the dataframe.
+    """Remove the data later than `n_days` before today from the dataframe.
 
     Args:
         df (`pd.DataFrame`): input dataframe
         datetime_colname (str): column name containing pd-datetime values
-        n_days (int): number of days (prior to today) to remove
+        n_days (int): Data up to the date this many days ago will be kept.
     Returns:
         `pd.DataFrame`: filtered dataframe
     """
