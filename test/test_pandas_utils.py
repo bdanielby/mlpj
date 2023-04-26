@@ -17,7 +17,7 @@ from mlpj import pandas_utils as pdu
 nan = np.nan
 
 
-def test_from_items():
+def test_from_items() -> None:
     pd_testing.assert_frame_equal(
         pdu.from_items([
             ('b', np.array([3, 8])),
@@ -44,7 +44,7 @@ def test_from_items():
         ], index=[3, 4])
 
 
-def test_wide_display():
+def test_wide_display() -> None:
     out = io.StringIO()
     with pdu.wide_display():
         n_cols = 50
@@ -55,7 +55,7 @@ def test_wide_display():
     assert len(lines) == 3
 
 
-def test_is_numerical():
+def test_is_numerical() -> None:
     assert pdu.is_numerical(pd.Series([3, 4]))
     assert pdu.is_numerical(pd.Series([3.5, 4]))
     assert pdu.is_numerical(pd.Series([True, False]))
@@ -63,7 +63,7 @@ def test_is_numerical():
     assert not pdu.is_numerical(pd.Series(["foo", "bar"]))
 
 
-def test_get_colnames():
+def test_get_colnames() -> None:
     df = pdu.from_items([
         ('a', [3, 4, 3, 2]),
         ('b', ['a', 'b', 'b', 'a']),
@@ -77,7 +77,7 @@ def test_get_colnames():
     np.testing.assert_array_equal(pdu.get_colnames(['x', 'y']), ['x', 'y'])
 
 
-def test_all_colnames_except():
+def test_all_colnames_except() -> None:
     X = pd.DataFrame(np.eye(4), columns=['x', 'a', 'ba', 'c'])
     assert pdu.all_colnames_except(X, ['a', 'c']) == ['x', 'ba']
 
@@ -86,7 +86,7 @@ def test_all_colnames_except():
     assert pdu.all_colnames_except(X, ['c', 'a', 'b', 'd']) == []
 
     
-def test_category_colnames():
+def test_category_colnames() -> None:
     df = pdu.from_items([
         ('a', [3, 4, 3, 2]),
         ('b', ['a', 'b', 'b', 'a']),
@@ -101,7 +101,7 @@ def test_category_colnames():
     assert pdu.category_colnames(df, feature_list=('b', 'c')) == ['b']
 
 
-def test_rename_column():
+def test_rename_column() -> None:
     df = pdu.from_items([
         ('a', [3, 4, 3, 2]),
         ('b', ['a', 'b', 'b', 'a']),
@@ -119,7 +119,7 @@ def test_rename_column():
         pdu.rename_column(df, 'foo', 'bar')
 
 
-def test_drop_index():
+def test_drop_index() -> None:
     df = pdu.from_items([
         ('b', np.array([3, 8])),
         ('a', ['first', 'second']),
@@ -135,7 +135,7 @@ def test_drop_index():
         ]))
 
     
-def test_drop_columns():
+def test_drop_columns() -> None:
     df = pdu.from_items([
         ('a', [3, 4, 3, 2]),
         ('b', ['a', 'b', 'b', 'a']),
@@ -164,7 +164,7 @@ def test_drop_columns():
         pdu.drop_columns(df, 'x')
 
 
-def test_columns_to_right():
+def test_columns_to_right() -> None:
     df = pdu.from_items([
         ('a', [3, 4, 3, 2]),
         ('b', ['a', 'b', 'b', 'a']),
@@ -181,14 +181,14 @@ def test_columns_to_right():
         ], index=[3, 4, 5, 8]))
 
 
-def test_shuffle_df_drop_index():
+def test_shuffle_df_drop_index() -> None:
     df = pd.DataFrame(np.random.random(size=(3, 3)), columns=['a', 'b', 'c'])
     df1 = pdu.shuffle_df_drop_index(df)
     np.testing.assert_array_equal(df1.index.values, np.arange(len(df)))
     np.testing.assert_allclose(df1.sum(), df.sum())
 
 
-def test_assert_frame_contents_equal():
+def test_assert_frame_contents_equal() -> None:
     df1 = pdu.from_items([
         ('b', np.array([3, 8])),
         ('a', ['first', 'second']),
@@ -203,7 +203,7 @@ def test_assert_frame_contents_equal():
     pdu.assert_frame_contents_equal(df1, df2)
 
 
-def test_ser_where_defined():
+def test_ser_where_defined() -> None:
     x = pd.Series([4, 5, nan, 2, nan])
 
     pd_testing.assert_series_equal(
@@ -211,7 +211,7 @@ def test_ser_where_defined():
         pd.Series([4., 5, 2], index=[0, 1, 3]))
 
     
-def test_n_undefined_and_percentage():
+def test_n_undefined_and_percentage() -> None:
     x = pd.Series([4, 5, nan, 2, nan])
     
     n, perc = pdu.n_undefined_and_percentage(x)
@@ -219,12 +219,12 @@ def test_n_undefined_and_percentage():
     assert perc == 2 / 5 * 100
 
 
-def test_colname_list():
+def test_colname_list() -> None:
     assert pdu.colname_list('foo') == ['foo']
     assert pdu.colname_list(['foo', 'bar']) == ['foo', 'bar']
 
 
-def test_sort():
+def test_sort() -> None:
     df = pdu.from_items([
         ('a', [3, 4, 3, 2]),
         ('b', ['a', 'b', 'c', 'd']),
@@ -243,14 +243,14 @@ def test_sort():
         ], index=[0, 1, 2, 3]))
         
 
-def test_sorted_unique_1dim():
+def test_sorted_unique_1dim() -> None:
     x = pd.Series([4, 3, nan, 8, 4, 3, nan, 2])
     pd_testing.assert_series_equal(
         pdu.sorted_unique_1dim(x),
         pd.Series([2, 3, 4, 8, nan]))
 
 
-def test_left_merge():
+def test_left_merge() -> None:
     df = pdu.from_items([('ITEM', [10, 20, 70, 30]),
                          ('Quantity', [3, 4, 8, 9])])
     dfb = pdu.from_items([('ITEM', [10, 20, 90]),
@@ -274,7 +274,7 @@ def test_left_merge():
 
 
 @numba.njit
-def add_cumsum_a_to_b(X):
+def add_cumsum_a_to_b(X: pd.DataFrame) -> None:
     a = X[:, 0]
     b = X[:, 1]
     b += np.cumsum(a)
@@ -283,11 +283,11 @@ def add_cumsum_a_to_b(X):
 
 
 @numba.njit
-def double_a(X):
+def double_a(X: pd.DataFrame) -> None:
     X[:, 0] *= 2
     
 
-def test_fast_groupby_multi_transform():
+def test_fast_groupby_multi_transform() -> None:
     df = pdu.shuffle_df_drop_index(
         pdu.from_items([
             ('g', [0,   0, 0, 0, 1, 1, 1, 1]),
@@ -318,7 +318,7 @@ def test_fast_groupby_multi_transform():
         ]))
     
 
-def test_flatten_multi_columns():
+def test_flatten_multi_columns() -> None:
     df = pdu.from_items([
         (('a', '1'), [3, 4, 3, 2]),
         (('b', '2'), ['a', 'b', 'b', 'a']),
@@ -335,7 +335,7 @@ def test_flatten_multi_columns():
         ], index=[3, 4, 5, 8]))
 
 
-def test_rename_groupby_colnames():
+def test_rename_groupby_colnames() -> None:
     df = pdu.from_items([
         ('g', [0, 0, 0, 0, 1, 1, 1]),
         ('a', [2, 3, 0, 1, 4, 2, 1]),
@@ -377,7 +377,7 @@ def test_rename_groupby_colnames():
         ], index=pd.Index([0, 1], name='group')))
 
 
-def test_print_column_info():
+def test_print_column_info() -> None:
     ser = pd.Series([3, 4, nan, 2])
     
     out = io.StringIO()
@@ -385,7 +385,7 @@ def test_print_column_info():
         pdu.print_column_info(ser, table_name='X')
 
 
-def test_print_table_info():
+def test_print_table_info() -> None:
     df = pdu.from_items([
         ('a', [2, 3, 0, 1, 4, 2, 1]),
         ('c', [8, 2, 5, 1, -2, -1, 4]),
@@ -396,7 +396,7 @@ def test_print_table_info():
         pdu.print_table_info(df, table_name='X')
 
 
-def test_consistency_check():
+def test_consistency_check() -> None:
     df = pdu.from_items([
         ('a', [2, 3,    0, 1, 4.1, 2, 1]),
         ('a1', [2, 3.1, 0, 1, 4,   2, 1]),
@@ -408,7 +408,7 @@ def test_consistency_check():
         pdu.consistency_check(df, 'a', 'a1')
 
 
-def test_truncate_datetime_to_freq():
+def test_truncate_datetime_to_freq() -> None:
     x = pd.Series(pd.to_datetime(['2023-04-22 10:40:22', '2023-03-01']))
     
     pd_testing.assert_series_equal(
@@ -424,7 +424,7 @@ def test_truncate_datetime_to_freq():
         pd.Series(pd.to_datetime(['2023-04-17', '2023-02-27'])))
 
 
-def test_truncate_datetime_to_month():
+def test_truncate_datetime_to_month() -> None:
     df = pd.DataFrame({'dt': pd.to_datetime(['2017-09-12', '2017-10-20'])})
     
     df['dtm'] = pdu.truncate_datetime_to_month(df['dt'])
@@ -435,7 +435,7 @@ def test_truncate_datetime_to_month():
         ('dtm', pd.to_datetime(['2017-09-01', '2017-10-01']))]))
 
 
-def test_truncate_datetime_to_week():
+def test_truncate_datetime_to_week() -> None:
     df = pd.DataFrame({'dt': pd.to_datetime(['2017-09-11', '2017-09-24'])})
     
     df['dtm'] = pdu.truncate_datetime_to_week(df['dt'])
@@ -449,7 +449,7 @@ def test_truncate_datetime_to_week():
         ]))
 
 
-def test_datetime_to_epoch():
+def test_datetime_to_epoch() -> None:
     pd_testing.assert_series_equal(
         pdu.datetime_to_epoch(
             pd.Series(pd.to_datetime(["1970-01-01", "1970-01-01 0:01:02.345",
@@ -462,7 +462,7 @@ def test_datetime_to_epoch():
         pd.Series([3600.]))
 
 
-def test_to_csv():
+def test_to_csv() -> None:
     df = pdu.from_items([
         ('b', np.array([3, 8])),
         ('a', ['first', 'second']),

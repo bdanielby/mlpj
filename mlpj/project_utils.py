@@ -9,6 +9,8 @@ import re
 import random
 import contextlib
 import tempfile
+from typing import Optional, Any, List, Union
+from collections.abc import Generator
 
 import numpy as np
 
@@ -40,7 +42,7 @@ class Manager(object):
     * `<project_path>/contents.db`: Sqlite database used by `result_display`
       commands
     """
-    def __init__(self, project_path, seed=None, doc=None):
+    def __init__(self, project_path: str, seed: Optional[int] = None, doc: Optional[str] = None):
         self.project_dir = os.path.abspath(os.path.expanduser(project_path))
         pu.makedir_unless_exists(self.project_dir)
         self.name = os.path.basename(self.project_dir)
@@ -67,85 +69,85 @@ class Manager(object):
 
         self.actions_looper = actions_looper.ActionsLooper(steps_storage, doc=doc)
     
-    def as_action(self, *args, **kwargs):
+    def as_action(self, *args, **kwargs) -> Any:
         """delegates to `actions_looper.ActionsLooper.action`"""
         return self.actions_looper.as_action(*args, **kwargs)
 
-    def add_available(self, *args, **kwargs):
+    def add_available(self, *args, **kwargs) -> bool:
         """delegates to `actions_looper.ActionsLooper.add_available`"""
         return self.actions_looper.add_available(*args, **kwargs)
     
-    def add_available_from_module(self, *args, **kwargs):
+    def add_available_from_module(self, *args, **kwargs) -> None:
         """delegates to `actions_looper.ActionsLooper.add_available_from_module`
         """
         return self.actions_looper.add_available_from_module(*args, **kwargs)
     
-    def add_available_from_main_module(self, *args, **kwargs):
+    def add_available_from_main_module(self, *args, **kwargs) -> None:
         """delegates to
         `actions_looper.ActionsLooper.add_available_from_main_module`
         """
         return self.actions_looper.add_available_from_main_module(*args, **kwargs)
 
     
-    def actions_loop(self, *args, **kwargs):
+    def actions_loop(self, *args, **kwargs) -> None:
         """delegates to `actions_looper.ActionsLooper.actions_loop`"""
         return self.actions_looper.actions_loop(*args, **kwargs)
 
     
     @property
-    def curr_action(self):
+    def curr_action(self) -> str:
         """delegates to `actions_looper.ActionsLooper.curr_action`"""
         return self.actions_looper.curr_action
         
     @property
-    def curr_step(self):
+    def curr_step(self) -> int:
         """delegates to `actions_looper.ActionsLooper.curr_step`"""
         return self.actions_looper.curr_step
         
     @property
-    def curr_astep(self):
-        """delegates to `actions_looper.ActionsLooper.curr_astep`"""
-        return self.actions_looper.curr_astep
-        
-    @property
-    def curr_step_method(self):
+    def curr_step_method(self) -> str:
         """delegates to `actions_looper.ActionsLooper.curr_step_method`"""
         return self.actions_looper.curr_step_method
+        
+    @property
+    def curr_astep(self) -> str:
+        """delegates to `actions_looper.ActionsLooper.curr_astep`"""
+        return self.actions_looper.curr_astep
     
-    def execute(self, *args, **kwargs):
+    def execute(self, *args, **kwargs) -> None:
         """delegates to `actions_looper.ActionsLooper.execute`"""
         return self.actions_looper.execute(*args, **kwargs)
     
-    def execute_fct_steps(self, *args, **kwargs):
+    def execute_fct_steps(self, *args, **kwargs) -> None:
         """delegates to `actions_looper.ActionsLooper.execute_fct_steps`"""
         return self.actions_looper.execute_fct_steps(*args, **kwargs)
     
-    def read_result(self, action, step):
+    def read_result(self, action: str, step: int) -> Any:
         """delegates to `actions_looper.ActionsLooper.read_result`"""
         return self.actions_looper.read_result(action, step)
 
     
-    def printer(self, *args, **kwargs):
+    def printer(self, *args, **kwargs) -> None:
         """delegates to `result_display.HTMLDisplay.printer`"""
         return self.display.printer(*args, **kwargs)
 
-    def print(self, *args, **kwargs):
+    def print(self, *args, **kwargs) -> None:
         """delegates to `result_display.HTMLDisplay.print`"""
         return self.display.print(*args, **kwargs)
         
-    def savefig(self, *args, **kwargs):
+    def savefig(self, *args, **kwargs) -> None:
         """delegates to `result_display.HTMLDisplay.savefig`"""
         return self.display.savefig(*args, **kwargs)
     
-    def add_db_entry(self, *args, **kwargs):
+    def add_db_entry(self, *args, **kwargs) -> None:
         """delegates to `result_display.HTMLDisplay.add_db_entry`"""
         return self.display.add_db_entry(*args, **kwargs)
         
-    def link_text(self, *args, **kwargs):
+    def link_text(self, *args, **kwargs) -> str:
         """delegates to `result_display.HTMLDisplay.link_text`"""
         return self.display.link_text(*args, **kwargs)
     
-    def print_link_and_return_filepath(self, filename, remark=''):
+    def print_link_and_return_filepath(self, filename: str, remark: str = '') -> str:
         """Create a filepath for the given filename in the image directory and
         print an HTML link to it.
 
@@ -160,7 +162,7 @@ class Manager(object):
         print(f'{remark}{link_text}')
         return filepath
 
-    def get_analysis_pdf_filepath(self, model_name, iteration=-1):
+    def get_analysis_pdf_filepath(self, model_name: str, iteration: int =-1) -> str:
         """Filepath to save a Cyclic Boosting analysis PDF in.
         
         Args:
@@ -175,29 +177,25 @@ class Manager(object):
             suffix = f"_{iteration}"
         return os.path.join(self.image_path, f"{model_name}{suffix}.pdf")
     
-    def get_keys(self):
+    def get_keys(self) -> List[str]:
         """delegates to `result_display.HTMLDisplay.get_keys`"""
         return self.display.get_keys()
 
-    def del_keys(self, keys):
+    def del_keys(self, keys: Union[str, List[str]]) -> None:
         """delegates to `result_display.HTMLDisplay.del_keys`"""
         return self.display.del_keys(keys)
 
-    def del_keys_like(self, regex):
+    def del_keys_like(self, regex: str) -> None:
         """delegates to `result_display.HTMLDisplay.del_keys_like`"""
         return self.display.del_keys_like(regex)
 
-    def get_findings(self):
+    def get_findings(self) -> List[Any]:
         """delegates to `result_display.HTMLDisplay.db_findings"""
         return self.display.get_findings()
-    
-    def generate_htmlpage(self, *args, **kwargs):
-        """delegates to `result_display.HTMLDisplay.generate_htmlpage`"""
-        return self.display.generate_htmlpage(*args, **kwargs)
 
 
 @contextlib.contextmanager
-def temp_project():
+def temp_project() -> Generator[Manager]:
     """Context manager offering a temporary project
 
     For example for testing purposes.

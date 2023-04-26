@@ -11,34 +11,34 @@ import datetime
 from mlpj import python_utils as pu
 
 
-def test_all_except()
+def test_all_except() -> None:
     lst = ['x', 'a', 'ba', 'a', 'c']
     assert pu.all_except(lst, ['a', 'c']) == ['x', 'ba']
 
 
-def test_isstring():
+def test_isstring() -> None:
     assert pu.isstring("foo")
     assert pu.isstring(b"foo")
     assert not pu.isstring(5)
     assert not pu.isstring(None)
 
 
-def test_if_true():
+def test_if_true() -> None:
     assert pu.if_true(True, 5) == 5
     assert pu.if_true(False, 5) == ''
     assert pu.if_true(False, 5, default=6) == 6
 
 
-def test_wi_perc():
+def test_wi_perc() -> None:
     assert pu.wi_perc(6, 10) == (6, 60)
     assert pu.wi_perc(6, 11) == (6, 6 / 11 * 100)
 
 
-def test_perc_str():
+def test_perc_str() -> None:
     assert pu.perc_str(6, 10) == "6 (60.00 %)"
 
 
-def test_first_of_each_item():
+def test_first_of_each_item() -> None:
     assert pu.first_of_each_item([('a', 3, 9), ('b', 4), ('c',)]) == [
         'a', 'b', 'c']
     
@@ -48,7 +48,7 @@ def test_first_of_each_item():
         == ['A', 'B'])
 
 
-def test_mkdir_unless_exists():
+def test_mkdir_unless_exists() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         dirpath = os.path.join(tmpdir, "foo", "bar")
         assert not os.path.isdir(dirpath)
@@ -57,7 +57,7 @@ def test_mkdir_unless_exists():
         pu.makedir_unless_exists(dirpath)
 
 
-def test_make_path_relative_to():
+def test_make_path_relative_to() -> None:
     assert pu.make_path_relative_to('/ab/cd/d/e', '/ab/cd') == 'd/e'
     assert pu.make_path_relative_to('/ab/cd/d/e', '/ab/cd/d2') == '../d/e'
     assert pu.make_path_relative_to('/abd/cd/d/e', '/ab/cd/d2') == (
@@ -67,7 +67,7 @@ def test_make_path_relative_to():
     assert pu.make_path_relative_to('/ab//cd//d/e/', '/ab//cd//d2') == '../d/e'
     
 
-def test_redirect_stdouterr():
+def test_redirect_stdouterr() -> None:
     out = io.StringIO()
     err = io.StringIO()
     with pu.redirect_stdouterr(out, err):
@@ -77,7 +77,7 @@ def test_redirect_stdouterr():
     assert err.getvalue() == "bar\n"
 
 
-def test_BranchedOutputStreams():
+def test_BranchedOutputStreams() -> None:
     out1 = io.StringIO()
     out2 = io.StringIO()
 
@@ -92,7 +92,7 @@ def test_BranchedOutputStreams():
     stream.close()
 
 
-def test_open_overwriting_safely():
+def test_open_overwriting_safely() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         filepath = os.path.join(tmpdir, 'foo.txt')
         
@@ -119,22 +119,22 @@ def test_open_overwriting_safely():
         assert contents(filepath) == new_output
 
 
-def test_ansiicol():
+def test_ansiicol() -> None:
     assert pu.ansiicol(31) == "\x1b[31m"
 
 
-def test_sqlite3_conn():
+def test_sqlite3_conn() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         dbpath = os.path.join(tmpdir, "database.db")
         with pu.sqlite3_conn(dbpath) as (db, cursor):
             pass
 
 
-def test_n_days_ago():
+def test_n_days_ago() -> None:
     today = datetime.date.today()
     assert (today - pu.n_days_ago(5)) == datetime.timedelta(days=5)
 
 
-def test_today_isoformat():
+def test_today_isoformat() -> None:
     today = datetime.date.today()
     assert pu.today_isoformat() == today.strftime("%Y-%m-%d")

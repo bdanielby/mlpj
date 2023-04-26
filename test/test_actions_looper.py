@@ -2,6 +2,7 @@
 Unit tests for `mlpj.actions_looper`.
 """
 import collections
+from typing import List, Tuple, Any
 
 import pytest
 
@@ -9,11 +10,11 @@ from mlpj import project_utils, actions_looper
 from mlpj.project_utils import temp_project
 
 
-def contents_of_defaultdict(dic):
+def sorted_items_of_dict(dic: dict) -> List[Tuple[Any, Any]]:
     """Sorted items of a defaultdict
 
     Args:
-        dic (defualtdict): input dictionary
+        dic (defaultdict): input dictionary
     Returns:
         list: sorted list of items
     """
@@ -29,30 +30,30 @@ class ClassExample:
     """
     interim_results = collections.defaultdict(list)
 
-    def step_r0_init(self):
+    def step_r0_init(self) -> str:
         self.interim_results[0].append("0")
         return "init"
 
-    def step_1_next(self, res0):
+    def step_1_next(self, res0: str) -> None:
         self.interim_results[1].append(f"1:{res0}")
 
-    def step_r5(self, res0):
+    def step_r5(self, res0: str) -> str:
         self.interim_results[5].append(f"5:{res0}")
         return "r2"
 
-    def step_10(self, res0, res2):
+    def step_10(self, res0: str, res2: str) -> None:
         self.interim_results[10].append(f"10:{res0},{res2}")
 
     @classmethod
-    def reset(cls):
+    def reset(cls) -> None:
         cls.interim_results.clear()
 
     @classmethod
-    def contents(cls):
-        return contents_of_defaultdict(cls.interim_results)
+    def contents(cls) -> List[Tuple[int, List[str]]]:
+        return sorted_items_of_dict(cls.interim_results)
     
 
-def test_execute_class_action():
+def test_execute_class_action() -> None:
     with temp_project() as pj:
         pj.add_available(ClassExample)
         ClassExample.reset()
@@ -112,25 +113,25 @@ class ObjExample:
     def __init__(self):
         self.interim_results = collections.defaultdict(list)
 
-    def step_r0_init(self):
+    def step_r0_init(self) -> str:
         self.interim_results[0].append("0")
         return "init"
 
-    def step_1_next(self, res0):
+    def step_1_next(self, res0: str) -> None:
         self.interim_results[1].append(f"1:{res0}")
 
-    def step_r5(self, res0):
+    def step_r5(self, res0: str) -> str:
         self.interim_results[5].append(f"5:{res0}")
         return "r2"
 
-    def step_10(self, res0, res2):
+    def step_10(self, res0: str, res2: str) -> None:
         self.interim_results[10].append(f"10:{res0},{res2}")
 
-    def contents(self):
-        return contents_of_defaultdict(self.interim_results)
+    def contents(self) -> List[Tuple[int, List[str]]]:
+        return sorted_items_of_dict(self.interim_results)
 
     
-def test_execute_object_action():
+def test_execute_object_action() -> None:
     with temp_project() as pj:
         obj = ObjExample()
         pj.add_available(obj)
@@ -182,7 +183,7 @@ def test_execute_object_action():
         assert pj.read_result("ObjExample", 5) == "r2"
 
         
-def test_execute_two_actions():
+def test_execute_two_actions() -> None:
     with temp_project() as pj:
         obj = ObjExample()
         pj.add_available(obj)
@@ -198,34 +199,34 @@ def test_execute_two_actions():
         assert ClassExample.contents() == [(0, ['0']), (1, ['1:init'])]
 
 
-def test_execute_fct_action():
+def test_execute_fct_action() -> None:
     interim_results = collections.defaultdict(list)
 
-    def contents():
-        return contents_of_defaultdict(interim_results)
+    def contents() -> List[Tuple[int, List[str]]]:
+        return sorted_items_of_dict(interim_results)
     
     with temp_project() as pj:
-        def fct_example():
+        def fct_example() -> None:
             """Example for an action implemented as a function.
     
             Each step traces its calls in the `defaultdict` `interim_results`.
             """
-            def step_r0_init():
+            def step_r0_init() -> str:
                 interim_results[0].append("0")
                 return "init"
     
-            def step_1_next(res0):
+            def step_1_next(res0: str) -> None:
                 assert pj.curr_action == "fct_example"
                 assert pj.curr_step == 1
                 assert pj.curr_step_method == "step_1_next"
                 assert pj.curr_astep == "fct_example_step_1_next"
                 interim_results[1].append(f"1:{res0}")
     
-            def step_r5(res0):
+            def step_r5(res0: str) -> str:
                 interim_results[5].append(f"5:{res0}")
                 return "r2"
     
-            def step_10(res0, res2):
+            def step_10(res0: str, res2: str) -> None:
                 interim_results[10].append(f"10:{res0},{res2}")
     
             pj.execute_fct_steps(locals())
@@ -278,22 +279,22 @@ def test_execute_fct_action():
         assert pj.read_result("fct_example", 5) == "r2"
 
         
-def test_as_action():
+def test_as_action() -> None:
     interim_results = collections.defaultdict(list)
 
-    def contents():
-        return contents_of_defaultdict(interim_results)
+    def contents() -> List[Tuple[int, List[str]]]:
+        return sorted_items_of_dict(interim_results)
     
     with temp_project() as pj:
         @pj.as_action('myaction')
-        def fct_example():
+        def fct_example() -> None:
             """Example for an action implemented as a function.
     
             The decorator renames the action to "myaction".
             
             Each step traces its calls in the `defaultdict` `interim_results`.
             """
-            def step_r0_init():
+            def step_r0_init() -> str:
                 assert pj.curr_action == "myaction"
                 assert pj.curr_step == 0
                 assert pj.curr_step_method == "step_r0_init"
@@ -301,7 +302,7 @@ def test_as_action():
                 interim_results[0].append("0")
                 return "init"
     
-            def step_1_next(res0):
+            def step_1_next(res0: str) -> None:
                 interim_results[1].append(f"1:{res0}")
     
             pj.execute_fct_steps(locals())
@@ -316,23 +317,23 @@ def test_as_action():
         assert pj.read_result("myaction", 0) == "init"
 
 
-def test_ActionResultProxy():
+def test_ActionResultProxy() -> None:
     interim_results = collections.defaultdict(list)
 
-    def contents():
-        return contents_of_defaultdict(interim_results)
+    def contents() -> List[Tuple[int, List[str]]]:
+        return sorted_items_of_dict(interim_results)
     
     with temp_project() as pj:
-        def fct_example():
+        def fct_example() -> None:
             """Example for an action implemented as a function.
     
             Each step traces its calls in the `defaultdict` `interim_results`.
             """
-            def step_r0_init():
+            def step_r0_init() -> actions_looper.ActionResultProxy:
                 interim_results[0].append("0")
                 return actions_looper.ActionResultProxy("ClassExample", 0)
     
-            def step_1_next(res0):
+            def step_1_next(res0: str) -> None:
                 interim_results[1].append(f"1:{res0}")
     
             pj.execute_fct_steps(locals())

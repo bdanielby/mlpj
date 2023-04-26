@@ -3,9 +3,11 @@ Utilities and convenience functions for `matplotlib`
 """
 import collections
 import warnings
+from typing import Optional, Any, Tuple
 
 import contextlib
 import numpy as np
+from numpy.typing import ArrayLike
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -20,7 +22,7 @@ LOWER_2_SIGMA_QUANTILE = (1. - 0.9545) / 2
 
 
 @contextlib.contextmanager
-def libstyle():
+def libstyle() -> None:
     """Context manager to set some `matplotlib` styles temporarily"""
     orig_params = list(mpl.rcParams.items())
     try:
@@ -50,7 +52,7 @@ def libstyle():
             mpl.rcParams.update(orig_params)
 
 
-def xytitle(xlabel=None, ylabel=None, title=None):
+def xytitle(xlabel: str = None, ylabel: str = None, title: str = None) -> None:
     """Add labels for the x-axis, y-axis and / or the whole plot.
     
     Args:
@@ -66,7 +68,7 @@ def xytitle(xlabel=None, ylabel=None, title=None):
         plt.title(title)
 
 
-def histogram_of_col(col):
+def histogram_of_col(col: pd.Series) -> None:
     """Plot a histogram of the given column and add titles.
 
     Args:
@@ -80,7 +82,8 @@ def histogram_of_col(col):
     xytitle(colname, "n", f"histogram of {colname}")
 
 
-def plot_all_numerical_histograms(pj, df, table_name):
+def plot_all_numerical_histograms(pj, df: pd.DataFrame, table_name: str
+) -> None:
     """Plot the histograms of all numerical columns.
 
     Each plot will be generated unter the key
@@ -119,8 +122,9 @@ class PlotGrid(object):
         n_cols (int): number of subplots per row
         For the other parameters, see `matplotlib.gridspec.GridSpec`.
     """
-    def __init__(self, n_plots=None, n_rows=None, n_cols=None, width_ratios=None, height_ratios=None,
-        wspace=None, hspace=None
+    def __init__(self, n_plots: int = None, n_rows: int = None, n_cols: int = None,
+        width_ratios: ArrayLike = None, height_ratios: ArrayLike = None,
+        wspace: Optional[float] =None, hspace: Optional[float] =None
     ):
         if n_cols is None:
             raise ValueError('n_cols is mandatory')
@@ -147,7 +151,7 @@ class PlotGrid(object):
                 width_ratios=width_ratios, height_ratios=height_ratios,
                 wspace=wspace, hspace=hspace)
 
-    def subplot(self, i_plot):
+    def subplot(self, i_plot: int) -> mpl.axes.Axes:
         """Go to the i-th subplot and return the corresponding axes object.
 
         The attribute `containing_gridspec` is set in the `axes` object.
@@ -158,7 +162,7 @@ class PlotGrid(object):
         Args:
             i_plot (int): plot number
         Returns:
-            `matplotlib.axes.AxesSubplot`: axes object of the i-th subplot in
+            `matplotlib.axes.Axes`: axes object of the i-th subplot in
             the grid
         """
         gridspec = self.gridspec[i_plot]
@@ -181,14 +185,14 @@ class PlotGrid(object):
         self.gridspec.update(**kwargs)
         
 
-def get_containing_gridspec(axes):
+def get_containing_gridspec(axes: mpl.axes.Axes) -> mpl.gridspec.SubplotSpec:
     """Return the gridspec containing this axes object, if applicable.
 
     `PlotGrid.subplot` sets the attribute `containing_gridspec` in the
     subplot axes object to the corresponding gridspec item.
 
     Args:
-        axes (`matplotlib.axes.AxesSubplot`): axes object of a subplot
+        axes (`matplotlib.axes.Axes`): axes object of a subplot
     Returns:
         `matplotlib.gridspec.SubplotSpec` or `None`:
         If the axes object hasn't been created by `PlotGrid.subplot`,
@@ -204,8 +208,10 @@ LOWER_1_SIGMA_QUANTILE = (1. - 0.6827) / 2
 LOWER_2_SIGMA_QUANTILE = (1. - 0.9545) / 2
 
 
-def histogram_plot(bin_contents, bin_boundaries, yscale='linear',
-                 orientation='vertical'):
+def histogram_plot(
+        bin_contents: ArrayLike, bin_boundaries: ArrayLike,
+        yscale: str = 'linear', orientation: str = 'vertical'
+) -> None:
     """Plot a histogram for the given bin boundaries and bin contents.
 
     Args:
@@ -263,9 +269,12 @@ def histogram_plot(bin_contents, bin_boundaries, yscale='linear',
             plt.setp(labels, rotation=70)
     
     
-def profile_plot(x, y, n_bins=100, equal_n_datapoints=False, n_ticks=10,
-               is_continuous_x=True, errorbars='quantile', histogram='linear',
-               density=None, with_median=True):
+def profile_plot(
+        x: ArrayLike, y: ArrayLike, n_bins: int = 100, equal_n_datapoints: bool = False,
+        n_ticks: int = 10, is_continuous_x: bool = True,
+        errorbars: str = 'quantile', histogram: str = 'linear',
+        density: Optional[str] = None, with_median: bool = True
+) -> None:
     """Profile plot of one column versus another.
     
     The x-axis represents the values of `x`, the y-axis the values of `y`.
@@ -436,10 +445,11 @@ def profile_plot(x, y, n_bins=100, equal_n_datapoints=False, n_ticks=10,
 
 
 def diagonal_plot_for_prediction(
-        pred, y, n_bins=100, n_ticks=10, errorbars='quantile',
-        xlabel="Prediction", ylabel="Truth", histogram='linear',
-        with_median=True
-):
+        pred: ArrayLike, y: ArrayLike, n_bins: int = 100, n_ticks: int = 10,
+        errorbars: str = 'quantile', xlabel: str = "Prediction",
+        ylabel: str = "Truth", histogram: str ='linear',
+        with_median: bool = True
+) -> None:
     """Diagonal plot of a prediction on test data with median and error bars
     for 1 sigma ranges and 2 sigma ranges in each bin.
 
@@ -493,7 +503,9 @@ def diagonal_plot_for_prediction(
         plt.ylabel(ylabel)
 
 
-def _calc_statistics(x, y, errorbars):
+def _calc_statistics(
+        x: ArrayLike, y: ArrayLike, errorbars: str
+) -> Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
     """Calculate means, medians, errors, counts for each bin.
     
     Args:
@@ -536,7 +548,10 @@ def _calc_statistics(x, y, errorbars):
     return means, medians, errors, counts
     
 
-def _profile_plot_discrete(x, y, errorbars, with_median=True):
+def _profile_plot_discrete(
+        x: ArrayLike, y: ArrayLike, errorbars: str,
+        with_median: bool = True
+) -> None:
     """Profile plot implementation for discrete x-values.
 
     Args:
@@ -559,7 +574,9 @@ def _profile_plot_discrete(x, y, errorbars, with_median=True):
         return bin_boundaries, np.asarray(counts)
 
 
-def _reduce_xticks(locations, labels, n_ticks):
+def _reduce_xticks(
+        locations: ArrayLike, labels: ArrayLike, n_ticks: int
+) -> Tuple[ArrayLike, ArrayLike]:
     """Recduce the number of ticks to plot.
 
     Args:
@@ -599,8 +616,10 @@ def _reduce_xticks(locations, labels, n_ticks):
     return chosen_locations, chosen_labels
 
 
-def _profile_plot_continuous(x, y, n_bins, equal_n_datapoints, n_ticks,
-                           errorbars, with_median=True):
+def _profile_plot_continuous(
+        x: ArrayLike, y: ArrayLike, n_bins: int, equal_n_datapoints: bool,
+        n_ticks: int, errorbars: str, with_median: bool = True
+) -> None:
     """Profile plot implementation for continuous x-values.
 
     Args:
@@ -646,7 +665,10 @@ def _profile_plot_continuous(x, y, n_bins, equal_n_datapoints, n_ticks,
         return bin_boundaries, np.asarray(counts)
 
     
-def _create_bottom_right_axes(equal_n_datapoints, histogram_x, histogram_y):
+def _create_bottom_right_axes(
+        equal_n_datapoints: bool, histogram_x: str, histogram_y: bool
+) -> Tuple[mpl.axes.Axes, mpl.axes.Axes, mpl.axes.Axes,
+     mpl.axes.Axes] :
     """Create axes objects for the bottom and/or the right of the current axes.
 
     Args:
@@ -656,6 +678,8 @@ def _create_bottom_right_axes(equal_n_datapoints, histogram_x, histogram_y):
             see param `histogram` in `profile_plot`.
         histogram_y (str or `None`): the kind of histogram to plot for the y-axis;
             see param `histogram` in `profile_plot`.
+    Returns:
+        axes_main, axes_bottom, axes_right, original_axes
     """
     original_axes = plt.gca()
 
@@ -701,7 +725,8 @@ def _create_bottom_right_axes(equal_n_datapoints, histogram_x, histogram_y):
     return axes_main, axes_bottom, axes_right, original_axes
 
 
-def _set_yticks_and_labels(axis, y_ticks, y_ticklabels):
+def _set_yticks_and_labels(axis: mpl.axes.Axes, y_ticks: ArrayLike,
+                         y_ticklabels: ArrayLike) -> None:
     """Workaround to set yticks and labels.
     
     https://stackoverflow.com/questions/63723514/userwarning-fixedformatter-should-only-be-used-together-with-fixedlocator
@@ -712,7 +737,10 @@ def _set_yticks_and_labels(axis, y_ticks, y_ticklabels):
     axis.set_yticklabels(y_ticklabels)
 
 
-def _plot_bin_results(x, means, medians, errors, errorbars, with_median=True):
+def _plot_bin_results(
+        x: ArrayLike, means: ArrayLike, medians: ArrayLike,
+        errors: ArrayLike, errorbars: str, with_median: bool = True
+) -> None:
     """Plot results for each bin
 
     Args:

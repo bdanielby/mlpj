@@ -1,12 +1,18 @@
 """
 Utilities and convenience functions for timeseries models
 """
+import datetime
+from typing import Union, Tuple
+
+import numpy as np
 import pandas as pd
 
 from . import python_utils as pu
 
 
-def remove_last_n_days(df, datetime_colname, n_days):
+def remove_last_n_days(
+        df: pd.DataFrame, datetime_colname: str, n_days: int
+) -> pd.DataFrame:
     """Remove the data later than `n_days` before today from the dataframe.
 
     Args:
@@ -20,7 +26,10 @@ def remove_last_n_days(df, datetime_colname, n_days):
     return df[df[datetime_colname] <= pd.to_datetime(last_day)]
 
 
-def ts_train_test_split(df, train_test_split_date, date_colname, target_colname):
+def ts_train_test_split(
+        df: pd.DataFrame, train_test_split_date: Union[str, datetime.datetime],
+        date_colname: str, target_colname: str
+) -> Tuple[pd.DataFrame, np.ndarray, pd.DataFrame, np.ndarray]:
     """Train-test split for timeseries data
 
     All data before the `train_test_split_date` is taken as training data,

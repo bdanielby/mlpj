@@ -2,9 +2,10 @@
 Utilities and convenience functions for using `numpy`.
 """
 import numpy as np
+from numpy.typing import ArrayLike
 
 
-def anynan(x):
+def anynan(x: ArrayLike) -> bool:
     """Does the input contain any NaN values?
 
     Args:
@@ -15,7 +16,7 @@ def anynan(x):
     return np.isnan(x).any()
 
 
-def digitize(x, bins):
+def digitize(x: ArrayLike, bins: ArrayLike) -> np.ndarray:
     """An alternative version `np.digitize`. It puts x values greater or
     equal to `bins.max()` on the last index of `bins`. Values smaller than
     `bins.min()` are put on the first index of `bins`.

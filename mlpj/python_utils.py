@@ -8,9 +8,11 @@ import datetime
 import contextlib
 import tempfile
 import logging
+from typing import Any, List, Tuple, Union, TextIO, BinaryIO
+from collections.abc import Sequence, Generator
 
 
-def all_except(seq, omissions):
+def all_except(seq: Sequence[Any], omissions: Sequence[Any]) -> List[Any]:
     """All entries of a list except the one mentioned in `omissions`.
 
     Args:
@@ -23,7 +25,7 @@ def all_except(seq, omissions):
     return [entry for entry in seq if entry not in omissions]
 
 
-def isstring(s):
+def isstring(s: Any) -> bool:
     """Is the argument a string?
 
     Args:
@@ -34,7 +36,7 @@ def isstring(s):
     return isinstance(s, (str, bytes))
 
 
-def if_true(flag, value, default=''):
+def if_true(flag: bool, value: Any, default: str = '') -> Any:
     """If the flag is true, return the value, otherwise the default.
 
     Args:
@@ -50,7 +52,7 @@ def if_true(flag, value, default=''):
         return default
     
 
-def wi_perc(value, reference):
+def wi_perc(value: float, reference: float) -> Tuple[float, float]:
     """Return the value and the percentage of the value in the reference.
 
     Args:
@@ -62,7 +64,7 @@ def wi_perc(value, reference):
     return value, value / reference * 100.
 
 
-def perc_str(value, reference):
+def perc_str(value: float, reference: float) -> str:
     """Return a string with the value and the percentage of the value in
     the reference.
 
@@ -76,18 +78,18 @@ def perc_str(value, reference):
     return f"{value} ({perc:.2f} %)"
 
 
-def first_of_each_item(items):
+def first_of_each_item(items: Sequence[Any]) -> List[Any]:
     """The first subitem of each item in the input
 
     Args:
-        items (list of indexable objects): input list of items
+        items (sequence of indexable objects): input list of items
     Returns:
         list of objects: For each item in the input, `item[0]`.
     """
     return [item[0] for item in items]
 
 
-def makedir_unless_exists(dirpath):
+def makedir_unless_exists(dirpath: str) -> None:
     """Create a directory path unless it already exists.
 
     Args:
@@ -97,7 +99,7 @@ def makedir_unless_exists(dirpath):
         os.makedirs(dirpath)
 
 
-def make_path_relative_to(filepath, reference_path):
+def make_path_relative_to(filepath: str, reference_path: str) -> str:
     """Make a filepath relative to a given reference path.
 
     This is needed for HTML links to images, for example.
@@ -119,7 +121,7 @@ def make_path_relative_to(filepath, reference_path):
 
 
 @contextlib.contextmanager
-def redirect_stdouterr(outfp, errfp):
+def redirect_stdouterr(outfp: TextIO, errfp: TextIO) -> Generator[None]:
     """Context manager for temporary redirection of `sys.stdout` and
     `sys.stderr`.
     
@@ -151,10 +153,10 @@ class BranchedOutputStreams:
     Args:
         streams (seq of output streams): output streams to delegate to
     """
-    def __init__(self, streams):
+    def __init__(self, streams: Sequence[TextIO]):
         self.streams = streams
 
-    def write(self, message):
+    def write(self, message: str) -> None:
         """Write a message to all output streams.
 
         Args:
@@ -163,19 +165,21 @@ class BranchedOutputStreams:
         for stream in self.streams:
             stream.write(message)
 
-    def flush(self):
+    def flush(self) -> None:
         """Flush all output streams."""
         for stream in self.streams:
             stream.flush()
 
-    def close(self):
+    def close(self) -> None:
         """Close all output streams."""
         for stream in self.streams:
             stream.close()
 
         
 @contextlib.contextmanager
-def open_overwriting_safely(filepath, mode):
+def open_overwriting_safely(
+        filepath: str, mode: int
+) -> Generator[Union[TextIO, BinaryIO]]:
     """Open a temporary file and rename it in the end.
 
     Instead of overwriting the given file directly, open a temporary file
@@ -202,7 +206,7 @@ def open_overwriting_safely(filepath, mode):
             os.remove(filepath_tmp)
 
 
-def ansiicol(color_num, is_bright=False):
+def ansiicol(color_num: int, is_bright: bool = False) -> str:
     """ANSI escape code for the given color number
     https://en.wikipedia.org/wiki/ANSI_escape_code
 
@@ -236,7 +240,7 @@ TERMSEQ = {
 
 
 @contextlib.contextmanager
-def sqlite3_conn(filepath):
+def sqlite3_conn(filepath) -> Generator[Tuple[sqlite3.Connection, sqlite3.Cursor]]:
     """Context manager for a connection to a Sqlite3 database file
 
     Args:
@@ -262,7 +266,7 @@ SECONDS_IN_HOUR = 3600
 SECONDS_IN_DAY = 24 * SECONDS_IN_HOUR
 
     
-def n_days_ago(n_days):
+def n_days_ago(n_days: int) -> datetime.datetime:
     """The datetime object for the day n_days days ago
 
     Args:
@@ -273,7 +277,7 @@ def n_days_ago(n_days):
     return datetime.date.today() - datetime.timedelta(n_days)
 
 
-def today_isoformat():
+def today_isoformat() -> str:
     """Today in ISO date format
 
     Returns:
@@ -282,7 +286,7 @@ def today_isoformat():
     return datetime.date.today().isoformat()
 
 
-def create_console_logger(module, level=logging.DEBUG):
+def create_console_logger(module: str, level: int = logging.DEBUG) -> logging.Logger:
     """Create a default console logger for a given module.
 
     Args:

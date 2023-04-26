@@ -4,8 +4,12 @@ Utilities and convenience functions for using `pandas`.
 import re
 import contextlib
 import collections
+from typing import Optional, Union, List, Tuple, Any, Dict
+from collections.abc import Sequence, Generator
+import types
 
 import numpy as np
+from numpy.typing import ArrayLike
 import pandas as pd
 import pandas.testing as pd_testing
 import numba
@@ -13,7 +17,9 @@ import numba
 from . import python_utils as pu
 
 
-def from_items(items, index=None):
+def from_items(
+        items: Sequence[Tuple[str, Any]], index: ArrayLike = None
+) -> pd.DataFrame:
     """Convert a sequence of (key, value) pairs to a DataFrame.
 
     This is similar to `pandas.DataFrame.from_items`, but with support for
@@ -29,6 +35,8 @@ def from_items(items, index=None):
         index (array-like, optional): index to use for resulting dataframe.
             Will default to `np.arange()` if no indexing information is
             part of input data and no index is provided, see `pd.DataFrame`.
+    Returns:
+        `pd.DataFrame`
     """
     dframe = pd.DataFrame.from_dict(collections.OrderedDict(items))
     if index is not None:
@@ -37,7 +45,9 @@ def from_items(items, index=None):
 
 
 @contextlib.contextmanager
-def wide_display(width=250, max_columns=75, max_rows=500):
+def wide_display(
+        width: int = 250, max_columns: int = 75, max_rows: int = 500
+) -> Generator[None]:
     """Use this for a wide and long output of `pd.DataFrame`s.
 
     Args:
@@ -52,7 +62,7 @@ def wide_display(width=250, max_columns=75, max_rows=500):
         yield
 
 
-def is_numerical(ser):
+def is_numerical(ser: pd.Series) -> bool:
     """Does a series contain numerical values?
 
     Args:
@@ -64,7 +74,7 @@ def is_numerical(ser):
     return ser.dtype.kind in "bif"
 
 
-def get_colnames(X_or_names):
+def get_colnames(X_or_names: Any) -> List[str]:
     """Get columns from an object carrying column names
     
     Args:
@@ -81,7 +91,9 @@ def get_colnames(X_or_names):
         return X_or_names
 
 
-def all_colnames_except(X_or_names, colnames):
+def all_colnames_except(
+        X_or_names: Any, colnames: Union[str, Sequence[str]]
+) -> List[str]:
     """All column names except the ones given in `colnames`.
 
     Args:
@@ -94,12 +106,14 @@ def all_colnames_except(X_or_names, colnames):
     return pu.all_except(get_colnames(X_or_names), colname_list(colnames))
 
 
-def category_colnames(df, feature_list=None):
+def category_colnames(
+        df: pd.DataFrame, feature_list: Optional[Sequence[str]] = None
+) -> List[str]:
     """The list of columns of category type
 
     Args:
         df (`pd.DataFrame`): input dataframe
-        feature_list (list of str, optional): If specified, consider only these
+        feature_list (seq of str, optional): If specified, consider only these
             columns of the dataframe.
     Returns:
         list of str: the category column names
@@ -115,7 +129,7 @@ def category_colnames(df, feature_list=None):
         return selected
 
     
-def rename_column(X, old_name, new_name):
+def rename_column(X: pd.DataFrame, old_name: str, new_name: str) -> None:
     """Rename a column in the passed dataframe (in place).
 
     Args:
@@ -131,7 +145,7 @@ def rename_column(X, old_name, new_name):
     X.rename(columns={old_name: new_name}, inplace=True)
 
     
-def drop_index(X):
+def drop_index(X: pd.DataFrame) -> pd.DataFrame:
     """Drop the index from a dataframe in place.
 
     Args:
@@ -143,7 +157,8 @@ def drop_index(X):
     return X
 
 
-def drop_columns(X, columns):
+def drop_columns(X: pd.DataFrame, columns: Union[str, Sequence[str]]
+               ) -> pd.DataFrame:
     """Drop columns of a dataframe in place.
 
     Args:
@@ -156,7 +171,8 @@ def drop_columns(X, columns):
     return X
 
 
-def columns_to_right(df, colnames):
+def columns_to_right(df: pd.DataFrame, colnames: Union[str, Sequence[str]]
+                   ) -> pd.DataFrame:
     """Move some column names to the right.
 
     Due to a Pandas bug, columns with texts in right-to-left writing order
@@ -175,7 +191,7 @@ def columns_to_right(df, colnames):
     return df[[colname for colname in df.columns if colname not in colnames_set] + colnames]
 
 
-def shuffle_df_drop_index(df):
+def shuffle_df_drop_index(df: pd.DataFrame) -> pd.DataFrame:
     """Shuffle the rows of a dataframe and drop the index.
 
     Args:
@@ -190,7 +206,9 @@ def shuffle_df_drop_index(df):
     return df
 
 
-def assert_frame_contents_equal(df1, df2, **kwargs):
+def assert_frame_contents_equal(
+        df1: pd.DataFrame, df2: pd.DataFrame, **kwargs
+) -> None:
     """Convenience function to assert that the contents of two datframes is
     equal.
 
@@ -205,7 +223,7 @@ def assert_frame_contents_equal(df1, df2, **kwargs):
         df1.reset_index(drop=True), df2.reset_index(drop=True), **kwargs)
 
         
-def ser_where_defined(ser):
+def ser_where_defined(ser: pd.Series) -> pd.Series:
     """Select non-null entries of a series.
 
     Args:
@@ -216,7 +234,7 @@ def ser_where_defined(ser):
     return ser[ser.notnull()]
 
 
-def n_undefined_and_percentage(ser):
+def n_undefined_and_percentage(ser: pd.Series) -> Tuple[int, float]:
     """Number of undefined values and their percentage
 
     Args:
@@ -228,7 +246,7 @@ def n_undefined_and_percentage(ser):
     return pu.wi_perc(ser.isnull().sum(), len(ser))
 
 
-def colname_list(colnames):
+def colname_list(colnames: Union[str, Sequence[str]]) -> Sequence[str]:
     """If the input is a string, turn it into a one-element list, otherwise just
     return the input.
 
@@ -242,7 +260,10 @@ def colname_list(colnames):
     return colnames
     
 
-def sort(X, colnames=None, inplace=False, kind='stable', ascending=True):
+def sort(
+        X: pd.DataFrame, colnames: Union[str, Sequence[str]] = None,
+        inplace: bool = False, kind: str = 'stable', ascending: bool = True
+) -> pd.DataFrame:
     """Convenience function to sort a dataframe with a stable sort and ignoring
     the index.
 
@@ -269,7 +290,7 @@ def sort(X, colnames=None, inplace=False, kind='stable', ascending=True):
     return X
 
 
-def sorted_unique_1dim(ser):
+def sorted_unique_1dim(ser: ArrayLike) -> pd.Series:
     """The sorted series of unique values within the given series or index.
 
     Args:
@@ -282,7 +303,7 @@ def sorted_unique_1dim(ser):
     return pd.Series(arr, name=ser.name)
 
 
-def left_merge(left, right, **kwargs):
+def left_merge(left: pd.DataFrame, right: pd.DataFrame, **kwargs) -> pd.DataFrame:
     """Convience function for a left merge in Pandas.
     
     `pd.DataFrame.merge` may produce result columns to in a different order
@@ -320,7 +341,9 @@ def left_merge(left, right, **kwargs):
     return df
 
 
-def _fast_groupby_multi_transform1(igroup, work_columns, f):
+def _fast_groupby_multi_transform1(
+        igroup: np.ndarray, work_columns: np.ndarray, f: types.FunctionType
+) -> None:
     """Backend for fast_groupby_multi_transform
 
     Args:
@@ -353,9 +376,12 @@ _fast_groupby_multi_transform1_jit = numba.njit(_fast_groupby_multi_transform1)
 
 
 def fast_groupby_multi_transform(
-        df, group_colnames, work_colnames, result_colnames,
-        f, further_sort_colnames=[], already_sorted=False
-):
+        df: pd.DataFrame, group_colnames: Union[str, Sequence[str]],
+        work_colnames: Union[str, Sequence[str]],
+        result_colnames: Union[str, Sequence[str]],
+        f: types.FunctionType,
+        further_sort_colnames: Sequence[str] = [], already_sorted: bool = False
+) -> None:
     """Efficiently transform multiple columns as a whole for each row group.
 
     In contrast to Pandas's groupby-transform, the work columns are transformed
@@ -418,7 +444,7 @@ def fast_groupby_multi_transform(
         df[result_colname] = work_columns[:, i]
 
 
-def flatten_multi_columns(df):
+def flatten_multi_columns(df: pd.DataFrame) -> None:
     """A multi-index for the column is flattened in place.
 
     The column levels are combined with underscores.
@@ -429,7 +455,10 @@ def flatten_multi_columns(df):
     df.columns = ['_'.join(colname).strip() for colname in df.columns.values]
 
 
-def rename_groupby_colnames(df, name_for_count=None, renamings=()):
+def rename_groupby_colnames(
+        df: pd.DataFrame, name_for_count: Optional[str] = None,
+        renamings: Union[Sequence[Tuple[str, str]], Dict[str, str]] = ()
+) -> None:
     """Rename column names as they arise from groupby-calls.
 
     The dataframe is changed in place.
@@ -481,7 +510,10 @@ def rename_groupby_colnames(df, name_for_count=None, renamings=()):
                 df.index.name = renamings[df.index.name]
 
 
-def print_column_info(col, table_name=None, ignored_columns=(), n_value_counts=50):
+def print_column_info(
+        col: pd.Series, table_name: str = None,
+        ignored_columns: Sequence[str] = (), n_value_counts: int = 50
+) -> None:
     """Print information about a column
     
     For a column, print its `dtype`, call `describe`, count the missing
@@ -525,7 +557,10 @@ def print_column_info(col, table_name=None, ignored_columns=(), n_value_counts=5
         print(value_counts.iloc[:50])
 
         
-def print_table_info(df, table_name, ignored_columns=(), n_value_counts=50):
+def print_table_info(
+        df: pd.DataFrame, table_name: str,
+        ignored_columns: Sequence[str] = (), n_value_counts: int = 50
+) -> None:
     """Print information about a dataframe's columns.
     
     For a dataframe, print its shape, column dtypes and call
@@ -547,7 +582,10 @@ def print_table_info(df, table_name, ignored_columns=(), n_value_counts=50):
             n_value_counts=n_value_counts)
 
 
-def consistency_check(df, colname_a, colname_b, n_examples=50, extra_colnames=[]):
+def consistency_check(
+        df: pd.DataFrame, colname_a: str, colname_b: str,
+        n_examples: int = 50, extra_colnames: Sequence[str] = []
+) -> None:
     """Print a report about inconsistencies between two columns.
 
     Args:
@@ -582,7 +620,7 @@ def consistency_check(df, colname_a, colname_b, n_examples=50, extra_colnames=[]
         print(examples)
 
         
-def keys_of_dict_column(ser):
+def keys_of_dict_column(ser: pd.Series) -> pd.Series:
     """Transform a series with dict values into a series with the lists of their
     keys.
 
@@ -594,7 +632,7 @@ def keys_of_dict_column(ser):
     return ser.transform(lambda   dic: list(dic.keys()))
 
 
-def distinct_keys_of_dict_column(ser):
+def distinct_keys_of_dict_column(ser: pd.Series) -> np.ndarray:
     """For a series with dict values, extract the distinct lists of keys
     these dicts.
 
@@ -606,7 +644,7 @@ def distinct_keys_of_dict_column(ser):
     return np.unique(keys_of_dict_column(ser))
 
 
-def truncate_datetime_to_freq(ser, freq):
+def truncate_datetime_to_freq(ser: pd.Series, freq: str) -> pd.Series:
     """Truncate datetime values to the specified period.
 
     Args:
@@ -618,7 +656,7 @@ def truncate_datetime_to_freq(ser, freq):
     return ser.dt.to_period(freq).dt.start_time
 
 
-def truncate_datetime_to_month(ser):
+def truncate_datetime_to_month(ser: pd.Series) -> pd.Series:
     """Truncate datetime values to the beginning of the month.
 
     Special case of `truncate_datetime_to_freq` with frequency 'M'.
@@ -632,7 +670,7 @@ def truncate_datetime_to_month(ser):
     return truncate_datetime_to_freq(ser, 'M')
 
 
-def truncate_datetime_to_week(ser, sunday_first=False):
+def truncate_datetime_to_week(ser: pd.Series, sunday_first: bool = False) -> pd.Series:
     """Truncate datetime values to the beginning of the week.
 
     Special case of `truncate_datetime_to_freq`.
@@ -655,7 +693,7 @@ def truncate_datetime_to_week(ser, sunday_first=False):
 MIN_DATETIME = pd.to_datetime("1970-01-01")
 
 
-def datetime_to_epoch(ser):
+def datetime_to_epoch(ser: pd.Series) -> pd.Series:
     """Convert a Pandas datetime series to a float epoch, including the
     nanoseconds.
     
@@ -669,7 +707,7 @@ def datetime_to_epoch(ser):
     return (ser - MIN_DATETIME).dt.total_seconds()
 
 
-def to_csv(df, filepath, **kwargs):
+def to_csv(df: pd.DataFrame, filepath: str, **kwargs) -> None:
     """Convenience function to call `pd.DataFrame.to_csv` with common
     defaults.
 

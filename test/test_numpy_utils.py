@@ -7,7 +7,7 @@ import numpy as np
 from mlpj import numpy_utils as npu
 
 
-def test_anynan():
+def test_anynan() -> None:
     x = np.array([np.nan, 0, 1, 10, 14])
     assert npu.anynan(x)
 
@@ -15,7 +15,7 @@ def test_anynan():
     assert not npu.anynan(x)
 
 
-def test_digitize():
+def test_digitize() -> None:
     x = np.array([-1000, -0.2, 0.2, 6.4, 3.0, 10, 11, 1000])
     bins = np.array([0.0, 1.0, 2.5, 4.0, 10.0])
     

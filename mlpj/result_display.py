@@ -7,6 +7,8 @@ import re
 import logging
 import time
 import io
+import sqlite3
+from typing import Tuple, Optional, List, Union, Any
 
 import contextlib
 import jinja2
@@ -70,10 +72,10 @@ class HTMLDisplay(object):
         refresh_not_started_after (float): upper limit for the number of seconds
             after creating the plot to ignore requests for refreshing
     """
-    def __init__(self, db_path, project_name, html_dir, image_dir,
-        default_figsize=(8, 6), further_html_headers='',
-        refresh_how_long=pu.SECONDS_IN_HOUR // 2,
-        refresh_not_started_after=pu.SECONDS_IN_DAY // 2,
+    def __init__(self, db_path: str, project_name: str, html_dir: str, image_dir: str,
+        default_figsize: Tuple[float, float] = (8, 6), further_html_headers: str = '',
+        refresh_how_long: float = pu.SECONDS_IN_HOUR // 2,
+        refresh_not_started_after: float = pu.SECONDS_IN_DAY // 2,
     ):
         self.db_path = os.path.abspath(db_path)
 
@@ -102,7 +104,8 @@ class HTMLDisplay(object):
         self.refresh_not_started_after = refresh_not_started_after
     
     @contextlib.contextmanager
-    def printer(self, key, suppl=False, silence_stdout=False, preformatted=True):
+    def printer(self, key: str, suppl: bool = False, silence_stdout: bool = False,
+              preformatted: bool = True) -> None:
         """Context manager to add the output printed in the context manager's
         block to the database under the given key and regenerate the
         corresponding HTML page.
@@ -130,7 +133,8 @@ class HTMLDisplay(object):
             self.print(key, content, suppl=suppl, silence_stdout=silence_stdout,
                     preformatted=preformatted)
 
-    def print(self, key, content, suppl=False, silence_stdout=False, preformatted=False):
+    def print(self, key: str, content: str, suppl: bool = False,
+            silence_stdout: bool = False, preformatted: bool = False) -> None:
         """Print and add the output to the database under the given key and
         regenerate the corresponding HTML page.
 
@@ -138,7 +142,7 @@ class HTMLDisplay(object):
         
         Args:
             key (str): result key
-            content: positional arguments for `print`
+            content (str): to be printed
             suppl (bool): If `True`, the database entry isn't replaced but
                 supplemented.
             silence_stdout (bool): If `True`, the content won't be printed but
@@ -154,9 +158,11 @@ class HTMLDisplay(object):
         self.add_db_entry(key, content, suppl=suppl)
         
     @contextlib.contextmanager
-    def savefig(self, key, tool='matplotlib', with_printer=True, with_libstyle=True,
-              figsize=None, refresh_millisec=None, tight_layout=True, close_all=True
-    ):
+    def savefig(self, key: str, tool: str = 'matplotlib', with_printer: bool = True,
+              with_libstyle: bool = True, figsize: Optional[Tuple[float, float]] = None,
+              refresh_millisec: Optional[float] = None, tight_layout: bool = True,
+              close_all: bool = True
+    ) -> None:
         """Context manager to convert the plot created in the context manager's
         block into a PNG file
 
@@ -271,7 +277,7 @@ class HTMLDisplay(object):
         if close_all:
             plt.close('all')
 
-    def add_db_entry(self, key, contents, suppl=False):
+    def add_db_entry(self, key: str, contents: str, suppl: bool = False) -> None:
         """Add an entry to the Sqlite3 database file for the given key.
 
         After adding the entry, regenerate the result HTML page.
@@ -299,7 +305,7 @@ class HTMLDisplay(object):
             db.commit()
             self._regenerate_html(cursor)
 
-    def link_text(self, filepath, link_text=''):
+    def link_text(self, filepath: str, link_text: str= '') -> str:
         """HTML text for a link to a given filepath.
 
         The filepath is made relative to the HTML directory for the link.
@@ -314,7 +320,7 @@ class HTMLDisplay(object):
         filepath = pu.make_path_relative_to(filepath, self.html_dir)
         return f'<a target="_blank" href="{filepath}">{link_text}</a>'
             
-    def get_keys(self):
+    def get_keys(self) -> List[str]:
         """Get all distinct result keys from the database, reverse-ordered by
         timestamp.
         
@@ -326,7 +332,7 @@ class HTMLDisplay(object):
                 cursor.execute('select distinct key from findings '
                                'order by timestamp desc'))
 
-    def del_keys(self, keys):
+    def del_keys(self, keys: Union[str, List[str]]) -> None:
         """Delete the given result keys from the database.
 
         Args:
@@ -342,7 +348,7 @@ class HTMLDisplay(object):
                     os.remove(plot_filepath)
             db.commit()
 
-    def del_keys_like(self, regex):
+    def del_keys_like(self, regex: str) -> None:
         """Delete result keys matching the passed regex from the database.
 
         Args:
@@ -356,7 +362,7 @@ class HTMLDisplay(object):
                 selected_keys.append(key)
         self.del_keys(selected_keys)
         
-    def get_findings(self):
+    def get_findings(self) -> List[Any]:
         """Get the contents of the findings table in the database,
         reverse-ordered by timestamp.
         
@@ -367,7 +373,7 @@ class HTMLDisplay(object):
             return list(cursor.execute(
                 'select * from findings order by timestamp desc'))
 
-    def _init_db_if_necessary(self):
+    def _init_db_if_necessary(self) -> None:
         """Create the Sqlite3 database file and the table "findings" in it
         unless they already exist.
         """
@@ -381,7 +387,7 @@ class HTMLDisplay(object):
                     primary key (key, ind)
                 )""")
 
-    def _regenerate_html(self, cursor, descending=True):
+    def _regenerate_html(self, cursor: sqlite3.Cursor, descending: bool = True) -> None:
         """Regenerate the result HTML page.
 
         Args:
@@ -432,7 +438,7 @@ class HTMLDisplay(object):
 
     RE_VALID_FIGURE_KEY = re.compile(r'^[^\s/()\[\]]+$')
 
-    def _get_image_filepath(self, filename_stem):
+    def _get_image_filepath(self, filename_stem: str) -> str:
         """Add the image directory and ".png" to the filename stem.
 
         Args:
@@ -443,7 +449,7 @@ class HTMLDisplay(object):
         filename = filename_stem + '.png'
         return os.path.join(self.image_dir, filename)
         
-    def _get_figure_path(self, key):
+    def _get_figure_path(self, key: str) -> str:
         """Check whether the key is valid and determine the filepath for a plot
         file.
 
@@ -459,7 +465,7 @@ class HTMLDisplay(object):
         plot_filepath = self._get_image_filepath(key)
         return key, plot_filepath
 
-    def _tight_layout(self):
+    def _tight_layout(self) -> None:
         """Call `plt.tight_layout` and catch `ValueError`s."""
         try:
             plt.tight_layout(pad=0.3)

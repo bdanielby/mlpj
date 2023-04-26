@@ -5,17 +5,36 @@ machine learning libraries
 import re
 import collections
 import os
+from typing import List, Union, Type, Any, Dict, Protocol
 
 import numpy as np
+from numpy.typing import ArrayLike
 import pandas as pd
 import sklearn.base
 import sklearn.pipeline
 
 from . import python_utils as pu
 from . import pandas_utils as pdu
+from . import project_utils
 
 
-def find_cls_in_sklearn_obj(est_or_trans, cls):
+class Estimator(Protocol):
+    def fit(self, X, y, **fit_params): ...
+    
+    def predict(self, X): ...
+    
+
+class Transformer(Protocol):
+    def fit(self, X, **fit_params): ...
+    
+    def transform(self, X): ...
+
+    def fit_transform(self, X, **fit_params): ...
+
+
+def find_cls_in_sklearn_obj(
+        est_or_trans: Union[Estimator, Transformer], cls: Type[Any]
+) -> Any:
     """Find a transformer or estimator of the given class within the given
     structured scikit-learn estimator or transformer.
 
@@ -25,7 +44,7 @@ def find_cls_in_sklearn_obj(est_or_trans, cls):
     supported.
 
     Args:
-        est_or_trans (`sklearn.Estimator` | `sklearn.Transformer`):
+        est_or_trans (`Estimator` | `Transformer`):
             structured estimator or transformer
         cls (class object): to compare against
     Returns:
@@ -54,7 +73,9 @@ def find_cls_in_sklearn_obj(est_or_trans, cls):
         return res
         
 
-def cyclic_boosting_analysis(pj, est, model_name):
+def cyclic_boosting_analysis(
+        pj: project_utils.Manager, est: Estimator, model_name: str
+) -> None:
     """Create the analysis plots for a trained Cyclic Boosting model based on
     the plot observers in the estimator.
 
@@ -63,7 +84,7 @@ def cyclic_boosting_analysis(pj, est, model_name):
     
     Args:
         pj (`project_utils.Manager`): project manager object
-        est (`sklearn.Estimator`): Scikit-learn-style estimator containing a
+        est (`Estimator`): Scikit-learn-style estimator containing a
             Cyclic Boosting model
         model_name (str): model name
 
@@ -94,11 +115,11 @@ def cyclic_boosting_analysis(pj, est, model_name):
               f'<a href="../image/{filename}">{filename}</a>')
 
 
-def xgboost_analysis(est, model_name, used_features):
+def xgboost_analysis(est: Estimator, model_name: str, used_features: List[str]) -> None:
     """Print analysis information about a trained XGBoost model.
 
     Args:
-        est (`sklearn.Estimator`): Scikit-learn-style estimator containing an
+        est (`Estimator`): Scikit-learn-style estimator containing an
             XGBoost model
         model_name (str): model name
 
@@ -115,7 +136,7 @@ def xgboost_analysis(est, model_name, used_features):
         print(f"{used_features[i]}: {importances[i]:.3f}")    
 
         
-def get_used_features(feature_properties):
+def get_used_features(feature_properties: Dict[Any, int]) -> List[str]:
     """Get the column names in the Cyclic Boosting feature properties. They
     are the features used by the model.
     
@@ -138,7 +159,9 @@ def get_used_features(feature_properties):
     return res
         
 
-def create_ordinal_encoder(df, used_features):
+def create_ordinal_encoder(
+        df: pd.DataFrame, used_features: List[str]
+) -> Transformer:
     """OrdinalEncoder acting on all categorical features
 
     Args:
@@ -156,7 +179,10 @@ def create_ordinal_encoder(df, used_features):
         handle_missing='return_nan', handle_unknown='return_nan')
 
 
-def create_target_encoder(df, used_features, min_samples_leaf=20):
+def create_target_encoder(
+        df: pd.DataFrame, used_features: List[str],
+        min_samples_leaf: int = 20
+) -> Transformer:
     """TargetEncoder acting on all categorical features
 
     Args:
@@ -178,48 +204,38 @@ def create_target_encoder(df, used_features, min_samples_leaf=20):
 
 
 class OnCols(sklearn.base.BaseEstimator, sklearn.base.ClassifierMixin,
-         sklearn.base.RegressorMixin, sklearn.base.TransformerMixin
+         sklearn.base.RegressorMixin
 ):
-    """Scikit-learn-style meta-estimator and meta-transformer restricting a
-    given estimator / transformer to a given subset of the columns of the
-    feature matrix.
+    """Scikit-learn-style meta-estimator restricting a given estimator to
+    a given subset of the columns of the feature matrix.
 
     The feature matrix is expected to be a `pd.DataFrame`.
 
     Args:
-        est_or_trans (`sklearn.Estimator` | `sklearn.Transformer`): base
-            estimator or transformer to be wrapped
+        est (`Estimator`): base estimator to be wrapped
         used_features (list of str): column names to restrict to
     """
-    def __init__(self, est_or_trans, used_features):
-        self._est = est_or_trans
+    def __init__(self, est: Estimator, used_features: List[str]):
+        self._est = est
         self._used_features = used_features
+        self._estimator_type = est._estimator_type
 
-    def _select_features(self, X):
+    def _select_features(self, X: pd.DataFrame) -> pd.DataFrame:
         if not isinstance(X, pd.DataFrame):
             raise ValueError("OnCols's methods require dataframes as "
                              "feature matrices")
         return X[self._used_features].copy()
 
-    def fit(self, X, y, **fit_params):
+    def fit(self, X: pd.DataFrame, y: ArrayLike, **fit_params) -> Estimator:
         X_passed = self._select_features(X)
         self._est = sklearn.base.clone(self._est)
         self._est.fit(X_passed, y, **fit_params)
         return self
 
-    def predict(self, X):
+    def predict(self, X: pd.DataFrame) -> np.ndarray:
         X_passed = self._select_features(X)
         return self._est.predict(X_passed)
 
-    def predict_proba(self, X):
+    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         X_passed = self._select_features(X)
         return self._est.predict_proba(X_passed)
-
-    def fit_transform(self, X, **fit_params):
-        X_passed = self._select_features(X)
-        self._est = sklearn.base.clone(self._est)
-        return self._fit_transform(X_passed, **fit_params)
-
-    def transform(self, X):
-        X_passed = self._select_features(X)
-        return self._est.transform(X_passed)

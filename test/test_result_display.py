@@ -4,6 +4,7 @@ Unit tests for `mlpj.result_display`.
 import os
 import collections
 import io
+from typing import List, Tuple, Any
 
 import numpy as np
 import pytest
@@ -14,11 +15,11 @@ from mlpj import plot_utils as pltu
 from mlpj.project_utils import temp_project
 
 
-def get_keys_and_contents(pj):
+def get_keys_and_contents(pj: project_utils.Manager) -> List[Tuple[str, Any]]:
     return [(key, contents) for (key, ind, timestamp, contents) in pj.get_findings()]
 
 
-def test_printer():
+def test_printer() -> None:
     with temp_project() as pj:
         with pj.printer("key1"):
             print("foo")
@@ -52,7 +53,7 @@ def test_printer():
         ]
 
 
-def test_savefig():
+def test_savefig() -> None:
     with temp_project() as pj:
         with pj.savefig("profile_plot"):
             n = 500
@@ -71,14 +72,14 @@ def test_savefig():
         assert os.path.exists(os.path.join(pj.image_path, "profile_plot.png"))
 
 
-def test_link_text():
+def test_link_text() -> None:
     with temp_project() as pj:
         assert pj.link_text(
             os.path.join(pj.image_path, "myfile.txt"), 'myfile') == (
                 '<a target="_blank" href="../image/myfile.txt">myfile</a>')
 
 
-def test_print_link_and_return_filepath():
+def test_print_link_and_return_filepath() -> None:
     with temp_project() as pj:
         out = io.StringIO()
         with pu.redirect_stdouterr(out, out):
@@ -91,7 +92,7 @@ def test_print_link_and_return_filepath():
         assert filepath == os.path.join(pj.image_path, 'myfile.txt')
 
 
-def test_get_analysis_pdf_filepath():
+def test_get_analysis_pdf_filepath() -> None:
     with temp_project() as pj:
         for iteration in [0, 1, -1]:
             if iteration == -1:
