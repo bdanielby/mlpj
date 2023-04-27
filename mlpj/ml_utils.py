@@ -5,7 +5,7 @@ machine learning libraries
 import re
 import collections
 import os
-from typing import List, Union, Type, Any, Dict, Protocol
+from typing import List, Union, Type, Any, Dict, Protocol, runtime_checkable
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -18,13 +18,21 @@ from . import pandas_utils as pdu
 from . import project_utils
 
 
+@runtime_checkable
 class Estimator(Protocol):
+    """Protocol to declare the type of sklearn-style estimators in function
+    signatures
+    """
     def fit(self, X, y, **fit_params): ...
     
     def predict(self, X): ...
     
 
+@runtime_checkable
 class Transformer(Protocol):
+    """Protocol to declare the type of sklearn-style transformers in function
+    signatures
+    """
     def fit(self, X, **fit_params): ...
     
     def transform(self, X): ...
@@ -33,8 +41,9 @@ class Transformer(Protocol):
 
 
 def find_cls_in_sklearn_obj(
-        est_or_trans: Union[Estimator, Transformer], cls: Type[Any]
-) -> Any:
+        est_or_trans: Union[Estimator, Transformer],
+        cls: Union[Type[Estimator], Type[Transformer]]
+) -> Union[Estimator, Transformer]:
     """Find a transformer or estimator of the given class within the given
     structured scikit-learn estimator or transformer.
 
@@ -149,7 +158,7 @@ def get_used_features(feature_properties: Dict[Any, int]) -> List[str]:
     for key in feature_properties.keys():
         if pu.isstring(key):
             res.append(key)
-        elif isinstance(key, collections.Sequence):
+        elif isinstance(key, collections.abc.Sequence):
             for subkey in key:
                 if subkey not in feature_properties:
                     res.append(subkey)
