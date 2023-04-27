@@ -67,7 +67,7 @@ def test_get_used_features() -> None:
     ) == ['feature_b', 'feature_a']
 
 
-def test_oncols() -> None:
+def test_OnCols() -> None:
     N = 100
     df = pdu.from_items([
         ('x1', np.random.random(N)),
@@ -88,3 +88,72 @@ def test_oncols() -> None:
     np.testing.assert_allclose(est1.coef_, est2.coef_)
     np.testing.assert_allclose(est1.intercept_, est2.intercept_)
     np.testing.assert_allclose(y_pred1, y_pred2)
+
+
+def test_OnColsTrans_same_output_columns() -> None:
+    N = 100
+    df = pdu.from_items([
+        ('x1', np.random.random(N)),
+        ('x2', np.random.random(N)),
+        ('c', np.random.random(N))
+    ])
+    
+    wrapped_trans = ml_utils.OnColsTrans(
+        preprocessing.StandardScaler(), ['x1', 'x2'])
+    wrapped_trans.fit(df)
+    df_trans1 = wrapped_trans.transform(df)
+    assert isinstance(df_trans1, pd.DataFrame)
+    df_trans2 = wrapped_trans.fit_transform(df)
+    assert isinstance(df_trans2, pd.DataFrame)
+    pd_testing.assert_frame_equal(df_trans1, df_trans2)
+    scaler1 = wrapped_trans._est
+    
+    scaler2 = preprocessing.StandardScaler()
+    scaler2.fit(df[['x1', 'x2']])
+    df_trans3 = scaler2.transform(df[['x1', 'x2']])
+    df_trans4 = scaler2.fit_transform(df[['x1', 'x2']])
+    np.testing.assert_allclose(df_trans3, df_trans4)
+
+    np.testing.assert_allclose(scaler1.scale_, scaler2.scale_)
+    np.testing.assert_allclose(scaler1.mean_, scaler2.mean_)
+
+    np.testing.assert_allclose(df_trans1[['x1', 'x2']].values, df_trans3)
+
+
+def test_OnColsTrans_different_output_columns() -> None:
+    N = 100
+    df = pdu.from_items([
+        ('x1', np.random.random(N)),
+        ('x2', np.random.random(N)),
+        ('c', np.random.random(N))
+    ])
+
+    for keep_originals in [False, True]:
+        wrapped_trans = ml_utils.OnColsTrans(
+            preprocessing.StandardScaler(), ['x1', 'x2'],
+            output_features=['x1s', 'x2s'], keep_originals=keep_originals)
+        
+        wrapped_trans.fit(df)
+        df_trans1 = wrapped_trans.transform(df)
+        assert isinstance(df_trans1, pd.DataFrame)
+        df_trans2 = wrapped_trans.fit_transform(df)
+        assert isinstance(df_trans2, pd.DataFrame)
+        pd_testing.assert_frame_equal(df_trans1, df_trans2)
+        scaler1 = wrapped_trans._est
+
+        if keep_originals:
+            assert df_trans1.columns.to_list() == ['x1', 'x2', 'c', 'x1s', 'x2s']
+        else:
+            assert df_trans1.columns.to_list() == ['c', 'x1s', 'x2s']
+            
+        
+        scaler2 = preprocessing.StandardScaler()
+        scaler2.fit(df[['x1', 'x2']])
+        df_trans3 = scaler2.transform(df[['x1', 'x2']])
+        df_trans4 = scaler2.fit_transform(df[['x1', 'x2']])
+        np.testing.assert_allclose(df_trans3, df_trans4)
+    
+        np.testing.assert_allclose(scaler1.scale_, scaler2.scale_)
+        np.testing.assert_allclose(scaler1.mean_, scaler2.mean_)
+    
+        np.testing.assert_allclose(df_trans1[['x1s', 'x2s']].values, df_trans3)

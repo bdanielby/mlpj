@@ -5,7 +5,7 @@ machine learning libraries
 import re
 import collections
 import os
-from typing import List, Union, Type, Any, Dict, Protocol, runtime_checkable
+from typing import Optional, List, Union, Type, Any, Dict, Protocol, runtime_checkable
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -49,8 +49,8 @@ def find_cls_in_sklearn_obj(
 
     `isinstance(cls)` is used as the criterion.
     
-    So far, the meta-estimators `OnCols` and `sklearn.pipeline.Pipeline` are
-    supported.
+    So far, the meta-estimators `OnCols`, `OnColsTrans and
+    `sklearn.pipeline.Pipeline` are supported.
 
     Args:
         est_or_trans (`Estimator` | `Transformer`):
@@ -61,10 +61,10 @@ def find_cls_in_sklearn_obj(
     Raises:
         `ValueError` if no match was found
     """
-    def loop(est_or_trans):
+    def loop(est_or_trans: Union[Estimator, Transformer]) -> Optional[Any]:
         if isinstance(est_or_trans, cls):
             return est_or_trans
-        elif isinstance(est_or_trans, OnCols):
+        elif isinstance(est_or_trans, (OnCols, OnColsTrans)):
             return loop(est_or_trans._est)
         elif isinstance(est_or_trans, sklearn.pipeline.Pipeline):
             for _, est in est_or_trans.steps:
@@ -177,15 +177,16 @@ def create_ordinal_encoder(
         df (`pd.DataFrame`): input dataframe
         used_features (list of str): columns in `X` to pass as features
     Returns:
-        `category_encoders.OrdinalEncoder` for the categorical features
+        `Transformer` for the categorical features (wrapped in `OnColsTrans)
 
     Using this function introduces a new dependency: `category_encoders`.
     """
     from category_encoders import OrdinalEncoder
 
-    return OrdinalEncoder(
-        cols=pdu.category_colnames(df, feature_list=used_features),
-        handle_missing='return_nan', handle_unknown='return_nan')
+    return OnColsTrans(
+        OrdinalEncoder(handle_missing='return_nan',
+                       handle_unknown='return_nan'),
+        pdu.category_colnames(df, feature_list=used_features))
 
 
 def create_target_encoder(
@@ -200,16 +201,17 @@ def create_target_encoder(
         The rest of the params are hyperparams of
         `category_encoders.TargetEncoder`.
     Returns:
-        `category_encoders.TargetEncoder` for the categorical features
+        `Transformer` for the categorical features (wrapped in `OnColsTrans)
 
     Using this function introduces a new dependency: `category_encoders`.
     """
     from category_encoders import TargetEncoder
 
-    return TargetEncoder(
-        cols=pdu.category_colnames(df, feature_list=used_features),
-        handle_missing='return_nan', handle_unknown='return_nan',
-        min_samples_leaf=min_samples_leaf)
+    return OnColsTrans(
+        TargetEncoder(
+            handle_missing='return_nan', handle_unknown='return_nan',
+            min_samples_leaf=min_samples_leaf),
+        pdu.category_colnames(df, feature_list=used_features))
 
 
 class OnCols(sklearn.base.BaseEstimator, sklearn.base.ClassifierMixin,
@@ -248,3 +250,89 @@ class OnCols(sklearn.base.BaseEstimator, sklearn.base.ClassifierMixin,
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         X_passed = self._select_features(X)
         return self._est.predict_proba(X_passed)
+
+    
+class OnColsTrans(sklearn.base.BaseEstimator, sklearn.base.TransformerMixin):
+    """Scikit-learn-style meta-transformer restricting a given transformer to
+    a given subset of the columns of the feature matrix.
+
+    The feature matrix is expected to be a `pd.DataFrame`.
+
+    Args:
+        trans: base transformer to be wrapped
+        used_features: column names to restrict to
+        output_features: column names for the result of the base transformer,
+            defaulting to `used_features`
+
+            If the base transformer transforms a `pd.DataFrame` into a
+            `pd.DataFrame` instead of an `np.ndarray`, the output features
+            are taken from it and this param is ignored.
+        keep_originals: whether to keep columns in `used_features` which aren't
+            present among `output_features` (or the output dataframe of
+            the base transformer)
+    """
+    def __init__(
+            self, trans: Transformer, used_features: List[str],
+            output_features: Optional[List[str]] = None, keep_originals: bool = False
+    ):
+        self._est = trans
+        self._used_features = used_features
+        if output_features is None:
+            self._output_features = used_features
+        else:
+            self._output_features = output_features
+        self._keep_originals = keep_originals
+
+    def _select_features(self, X: pd.DataFrame) -> pd.DataFrame:
+        if not isinstance(X, pd.DataFrame):
+            raise ValueError(
+                "OnColsTrans's methods require dataframes as "
+                "feature matrices")
+        return X[self._used_features].copy()
+
+    def _result_dataframe(
+            self, X: pd.DataFrame,
+            trans_result: Union[pd.DataFrame, np.ndarray]
+    ) -> pd.DataFrame:
+        X = X.copy()
+        
+        if isinstance(trans_result, pd.DataFrame):
+            output_features = trans_result.columns.to_list()
+            X_trans = trans_result.iloc
+        else:
+            output_features = self._output_features
+            
+            n_cols_found = trans_result.shape[1]
+            if len(output_features) != n_cols_found:
+                raise ValueError(
+                    f"The transformer result has {n_cols_found} columns but "
+                    f"we expected the output features {output_features}, i.e. "
+                    f"{len(output_features)} columns")
+            
+            X_trans = trans_result
+
+        if not self._keep_originals:
+            # Drop the used features which aren't present in the base
+            #   transformer's output.
+            dropped_colnames = set(self._used_features) - set(output_features)
+            if len(dropped_colnames) > 0:
+                X = pdu.drop_columns(X, dropped_colnames)
+    
+        # Copy all output features into the dataframe.
+        for i, colname in enumerate(output_features):
+            X[colname] = X_trans[:, i]
+        return X
+
+    def fit(self, X: pd.DataFrame, **fit_params) -> Transformer:
+        X_passed = self._select_features(X)
+        self._est = sklearn.base.clone(self._est)
+        self._est.fit(X_passed, **fit_params)
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        X_passed = self._select_features(X)
+        return self._result_dataframe(X, self._est.transform(X_passed))
+
+    def fit_transform(self, X: pd.DataFrame, **fit_transform) -> pd.DataFrame:
+        X_passed = self._select_features(X)
+        return self._result_dataframe(X, self._est.fit_transform(X_passed))
