@@ -78,7 +78,7 @@ def test_OnCols() -> None:
     
     model1 = ml_utils.OnCols(linear_model.LinearRegression(), ['x2', 'x1'])
     model1.fit(df, df['y'])
-    est1 = model1._est
+    est1 = model1.est
     y_pred1 = model1.predict(df)
     
     est2 = linear_model.LinearRegression()
@@ -100,13 +100,17 @@ def test_OnColsTrans_same_output_columns() -> None:
     
     wrapped_trans = ml_utils.OnColsTrans(
         preprocessing.StandardScaler(), ['x1', 'x2'])
+    
+    assert hasattr(wrapped_trans, 'get_params')
+    assert hasattr(wrapped_trans, 'set_params')
+        
     wrapped_trans.fit(df)
     df_trans1 = wrapped_trans.transform(df)
     assert isinstance(df_trans1, pd.DataFrame)
     df_trans2 = wrapped_trans.fit_transform(df)
     assert isinstance(df_trans2, pd.DataFrame)
     pd_testing.assert_frame_equal(df_trans1, df_trans2)
-    scaler1 = wrapped_trans._est
+    scaler1 = wrapped_trans.est
     
     scaler2 = preprocessing.StandardScaler()
     scaler2.fit(df[['x1', 'x2']])
@@ -139,13 +143,12 @@ def test_OnColsTrans_different_output_columns() -> None:
         df_trans2 = wrapped_trans.fit_transform(df)
         assert isinstance(df_trans2, pd.DataFrame)
         pd_testing.assert_frame_equal(df_trans1, df_trans2)
-        scaler1 = wrapped_trans._est
+        scaler1 = wrapped_trans.est
 
         if keep_originals:
             assert df_trans1.columns.to_list() == ['x1', 'x2', 'c', 'x1s', 'x2s']
         else:
             assert df_trans1.columns.to_list() == ['c', 'x1s', 'x2s']
-            
         
         scaler2 = preprocessing.StandardScaler()
         scaler2.fit(df[['x1', 'x2']])

@@ -37,7 +37,7 @@ class Transformer(Protocol):
     
     def transform(self, X): ...
 
-    def fit_transform(self, X, **fit_params): ...
+    def fit_transform(self, X, y=None, **fit_params): ...
 
 
 def find_cls_in_sklearn_obj(
@@ -65,7 +65,7 @@ def find_cls_in_sklearn_obj(
         if isinstance(est_or_trans, cls):
             return est_or_trans
         elif isinstance(est_or_trans, (OnCols, OnColsTrans)):
-            return loop(est_or_trans._est)
+            return loop(est_or_trans.est)
         elif isinstance(est_or_trans, sklearn.pipeline.Pipeline):
             for _, est in est_or_trans.steps:
                 res = loop(est)
@@ -227,39 +227,47 @@ class OnCols(sklearn.base.BaseEstimator, sklearn.base.ClassifierMixin,
         used_features (list of str): column names to restrict to
     """
     def __init__(self, est: Estimator, used_features: List[str]):
-        self._est = est
-        self._used_features = used_features
+        self.est = est
+        self.used_features = used_features
         self._estimator_type = est._estimator_type
 
     def _select_features(self, X: pd.DataFrame) -> pd.DataFrame:
         if not isinstance(X, pd.DataFrame):
             raise ValueError("OnCols's methods require dataframes as "
                              "feature matrices")
-        return X[self._used_features].copy()
+        return X[self.used_features].copy()
 
     def fit(self, X: pd.DataFrame, y: ArrayLike, **fit_params) -> Estimator:
         X_passed = self._select_features(X)
-        self._est = sklearn.base.clone(self._est)
-        self._est.fit(X_passed, y, **fit_params)
+        self.est = sklearn.base.clone(self.est)
+        self.est.fit(X_passed, y, **fit_params)
         return self
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         X_passed = self._select_features(X)
-        return self._est.predict(X_passed)
+        return self.est.predict(X_passed)
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         X_passed = self._select_features(X)
-        return self._est.predict_proba(X_passed)
+        return self.est.predict_proba(X_passed)
 
-    
-class OnColsTrans(sklearn.base.BaseEstimator, sklearn.base.TransformerMixin):
+    def score(self, X, y=None, sample_weight=None) -> float:
+        X_passed = self._select_features(X)
+        return self.est.score(X_passed, y=y, sample_weight=sample_weight)
+
+
+class OnColsTrans(sklearn.base.BaseEstimator, sklearn.base.TransformerMixin,
+              auto_wrap_output_keys=None):
     """Scikit-learn-style meta-transformer restricting a given transformer to
     a given subset of the columns of the feature matrix.
 
     The feature matrix is expected to be a `pd.DataFrame`.
 
+    In the methods `get_params`, `set_params`, `OnColsTrans` just delegates
+    to the base transformer.
+
     Args:
-        trans: base transformer to be wrapped
+        est: base transformer to be wrapped
         used_features: column names to restrict to
         output_features: column names for the result of the base transformer,
             defaulting to `used_features`
@@ -272,23 +280,23 @@ class OnColsTrans(sklearn.base.BaseEstimator, sklearn.base.TransformerMixin):
             the base transformer)
     """
     def __init__(
-            self, trans: Transformer, used_features: List[str],
+            self, est: Transformer, used_features: List[str],
             output_features: Optional[List[str]] = None, keep_originals: bool = False
     ):
-        self._est = trans
-        self._used_features = used_features
+        self.est = est
+        self.used_features = used_features
         if output_features is None:
-            self._output_features = used_features
+            self.output_features = used_features
         else:
-            self._output_features = output_features
-        self._keep_originals = keep_originals
+            self.output_features = output_features
+        self.keep_originals = keep_originals
 
     def _select_features(self, X: pd.DataFrame) -> pd.DataFrame:
         if not isinstance(X, pd.DataFrame):
             raise ValueError(
                 "OnColsTrans's methods require dataframes as "
                 "feature matrices")
-        return X[self._used_features].copy()
+        return X[self.used_features].copy()
 
     def _result_dataframe(
             self, X: pd.DataFrame,
@@ -300,7 +308,7 @@ class OnColsTrans(sklearn.base.BaseEstimator, sklearn.base.TransformerMixin):
             output_features = trans_result.columns.to_list()
             X_trans = trans_result.iloc
         else:
-            output_features = self._output_features
+            output_features = self.output_features
             
             n_cols_found = trans_result.shape[1]
             if len(output_features) != n_cols_found:
@@ -311,10 +319,10 @@ class OnColsTrans(sklearn.base.BaseEstimator, sklearn.base.TransformerMixin):
             
             X_trans = trans_result
 
-        if not self._keep_originals:
+        if not self.keep_originals:
             # Drop the used features which aren't present in the base
             #   transformer's output.
-            dropped_colnames = set(self._used_features) - set(output_features)
+            dropped_colnames = set(self.used_features) - set(output_features)
             if len(dropped_colnames) > 0:
                 X = pdu.drop_columns(X, dropped_colnames)
     
@@ -325,14 +333,16 @@ class OnColsTrans(sklearn.base.BaseEstimator, sklearn.base.TransformerMixin):
 
     def fit(self, X: pd.DataFrame, **fit_params) -> Transformer:
         X_passed = self._select_features(X)
-        self._est = sklearn.base.clone(self._est)
-        self._est.fit(X_passed, **fit_params)
+        self.est = sklearn.base.clone(self.est)
+        self.est.fit(X_passed, **fit_params)
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         X_passed = self._select_features(X)
-        return self._result_dataframe(X, self._est.transform(X_passed))
+        return self._result_dataframe(X, self.est.transform(X_passed))
 
-    def fit_transform(self, X: pd.DataFrame, **fit_transform) -> pd.DataFrame:
+    def fit_transform(
+            self, X: pd.DataFrame, y: ArrayLike = None, **fit_transform
+    ) -> pd.DataFrame:
         X_passed = self._select_features(X)
-        return self._result_dataframe(X, self._est.fit_transform(X_passed))
+        return self._result_dataframe(X, self.est.fit_transform(X_passed))
