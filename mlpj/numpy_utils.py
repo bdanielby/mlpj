@@ -30,7 +30,7 @@ def digitize(x: ArrayLike, bins: ArrayLike) -> np.ndarray:
         bins (array-like, 1dim): array of bins, must be monotonic
     Returns:
         `np.ndarray`: array of indices; it has the same shape as `x`.
-    
+
     Raises:
         ValueError: If the input is not 1-dimensional, or if `bins` is not monotonic.
         TypeError: If the type of the input is complex.

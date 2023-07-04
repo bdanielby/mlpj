@@ -4,6 +4,7 @@ Unit tests for `mlpj.pandas_utils`.
 import datetime
 import collections
 import io
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -85,14 +86,14 @@ def test_all_colnames_except() -> None:
     assert pdu.all_colnames_except(X, ['c', 'a']) == ['b', 'd']
     assert pdu.all_colnames_except(X, ['c', 'a', 'b', 'd']) == []
 
-    
+
 def test_category_colnames() -> None:
     df = pdu.from_items([
         ('a', [3, 4, 3, 2]),
         ('b', ['a', 'b', 'b', 'a']),
         ('c', ['x', 'y', 'z', 'x'])
     ])
-        
+
     assert pdu.category_colnames(df) == []
     for colname in ['a', 'b']:
         df[colname] = df[colname].astype('category')
@@ -106,7 +107,7 @@ def test_rename_column() -> None:
         ('a', [3, 4, 3, 2]),
         ('b', ['a', 'b', 'b', 'a']),
     ])
-    
+
     pdu.rename_column(df, 'b', 'b1')
     pd_testing.assert_frame_equal(
         df,
@@ -134,14 +135,14 @@ def test_drop_index() -> None:
             ('a', ['first', 'second'])
         ]))
 
-    
+
 def test_drop_columns() -> None:
     df = pdu.from_items([
         ('a', [3, 4, 3, 2]),
         ('b', ['a', 'b', 'b', 'a']),
         ('c', ['x', 'y', 'z', 'x'])
     ], index=[3, 4, 5, 8])
-    
+
     df1 = df.copy()
     pdu.drop_columns(df1, 'a')
 
@@ -159,7 +160,7 @@ def test_drop_columns() -> None:
         pdu.from_items([
             ('b', ['a', 'b', 'b', 'a']),
         ], index=[3, 4, 5, 8]))
-        
+
     with pytest.raises(KeyError):
         pdu.drop_columns(df, 'x')
 
@@ -193,7 +194,7 @@ def test_assert_frame_contents_equal() -> None:
         ('b', np.array([3, 8])),
         ('a', ['first', 'second']),
     ], index=[3, 4])
-    
+
     df2 = pd.DataFrame([[3, 'first'], [8, 'second']],
                        columns=['b', 'a'])
 
@@ -210,13 +211,47 @@ def test_ser_where_defined() -> None:
         pdu.ser_where_defined(x),
         pd.Series([4., 5, 2], index=[0, 1, 3]))
 
-    
+
 def test_n_undefined_and_percentage() -> None:
     x = pd.Series([4, 5, nan, 2, nan])
-    
+
     n, perc = pdu.n_undefined_and_percentage(x)
     assert n == 2
     assert perc == 2 / 5 * 100
+
+
+@pytest.mark.parametrize('ser, expected', [
+    (pd.Series([3., nan, 4, nan]), 2),
+    (pd.Series([3., 4]), 0),
+    (pd.Series([None, "a", ""]), 1),
+    (pd.Series(["a", ""]), 0),
+    (pd.Series([]), 0),
+])
+def test_n_undefined(ser: pd.Series, expected: int) -> None:
+    assert pdu.n_undefined(ser) == expected
+
+
+
+@pytest.mark.parametrize('ser, expected', [
+    (pd.Series([3., nan, 4, nan]), False),
+    (pd.Series([3., 4]), True),
+    (pd.Series([None, "a", ""]), False),
+    (pd.Series(["a", ""]), True),
+    (pd.Series([]), True),
+])
+def test_defined_everywhere(ser: pd.Series, expected: int) -> None:
+    assert pdu.defined_everywhere(ser) == expected
+
+
+@pytest.mark.parametrize('ser, expected', [
+    (pd.Series([nan, 3., nan, 4, nan]), pd.Series([3., 3, 3, 4, 4])),
+    (pd.Series([3., 4]), pd.Series([3., 4])),
+    (pd.Series([None, "a", "", None]), pd.Series(["a", "a", "", ""])),
+    (pd.Series(["a", ""]), pd.Series(["a", ""])),
+    (pd.Series([]), pd.Series([])),
+])
+def test_fill_forward_then_backward(ser: pd.Series, expected: pd.Series) -> None:
+    pd_testing.assert_series_equal(pdu.fill_forward_then_backward(ser), expected)
 
 
 def test_colname_list() -> None:
@@ -233,7 +268,7 @@ def test_sort() -> None:
 
     df1 = pdu.sort(df, colnames='a', inplace=True)
     assert df1 is df
-    
+
     pd_testing.assert_frame_equal(
         df,
         pdu.from_items([
@@ -241,7 +276,7 @@ def test_sort() -> None:
             ('b', ['d', 'a', 'c', 'b']),
             ('c', ['w', 'x', 'z', 'y'])
         ], index=[0, 1, 2, 3]))
-        
+
 
 def test_sorted_unique_1dim() -> None:
     x = pd.Series([4, 3, nan, 8, 4, 3, nan, 2])
@@ -260,7 +295,7 @@ def test_left_merge() -> None:
         dfr, pdu.from_items([('ITEM', [10, 20, 70, 30]),
                              ('Quantity', [3, 4, 8, 9]),
                              ('Quantity_nrm', [8, 9, nan, nan])]))
-    
+
     df = pdu.from_items([('ITEM', np.zeros(0)),
                          ('Quantity', np.zeros(0))])
     dfb = pdu.from_items([('ITEM', np.zeros(0)),
@@ -285,7 +320,7 @@ def add_cumsum_a_to_b(X: pd.DataFrame) -> None:
 @numba.njit
 def double_a(X: pd.DataFrame) -> None:
     X[:, 0] *= 2
-    
+
 
 def test_fast_groupby_multi_transform() -> None:
     df = pdu.shuffle_df_drop_index(
@@ -294,7 +329,7 @@ def test_fast_groupby_multi_transform() -> None:
             ('a', [1,   2, 4, 8, 3, 9, 27, 81]),
             ('b', [nan, 2, 5, 4, 4, 0, 3, -1])
         ]))
-    
+
     pdu.fast_groupby_multi_transform(
         df, 'g', ['a', 'b'], 'b', add_cumsum_a_to_b, further_sort_colnames='a')
 
@@ -308,7 +343,7 @@ def test_fast_groupby_multi_transform() -> None:
 
     pdu.fast_groupby_multi_transform(
         df, 'g', 'a', 'a', double_a, already_sorted=True)
-    
+
     pdu.assert_frame_contents_equal(
         df,
         pdu.from_items([
@@ -316,7 +351,7 @@ def test_fast_groupby_multi_transform() -> None:
             ('a', [2,   4, 8, 16,  6, 18, 54, 162]),
             ('b', [nan, 5, 12, 19, 7, 12, 42, 119])
         ]))
-    
+
 
 def test_flatten_multi_columns() -> None:
     df = pdu.from_items([
@@ -324,7 +359,7 @@ def test_flatten_multi_columns() -> None:
         (('b', '2'), ['a', 'b', 'b', 'a']),
         (('c', '1'), ['x', 'y', 'z', 'x'])
     ], index=[3, 4, 5, 8])
-    
+
     pdu.flatten_multi_columns(df)
     pd_testing.assert_frame_equal(
         df,
@@ -342,7 +377,7 @@ def test_rename_groupby_colnames() -> None:
         ('b', [-1, 1, 2, 0, -2, 1, 0]),
         ('c', [8, 2, 5, 1, -2, -1, 4]),
     ])
-    
+
     dfg = df.groupby('g').agg(collections.OrderedDict([
         ('a', ['sum', 'max']),
         ('b', ['sum', 'count']),
@@ -360,7 +395,7 @@ def test_rename_groupby_colnames() -> None:
             ('group_count', [4, 3]),
             ('c', [8, 4])
         ], index=pd.Index([0, 1], name='g')))
-    
+
     dfg2 = dfg.copy()
     pdu.rename_groupby_colnames(
         dfg2, name_for_count='group_count',
@@ -379,7 +414,7 @@ def test_rename_groupby_colnames() -> None:
 
 def test_print_column_info() -> None:
     ser = pd.Series([3, 4, nan, 2])
-    
+
     out = io.StringIO()
     with pu.redirect_stdouterr(out, out):
         pdu.print_column_info(ser, table_name='X')
@@ -390,7 +425,7 @@ def test_print_table_info() -> None:
         ('a', [2, 3, 0, 1, 4, 2, 1]),
         ('c', [8, 2, 5, 1, -2, -1, 4]),
     ])
-    
+
     out = io.StringIO()
     with pu.redirect_stdouterr(out, out):
         pdu.print_table_info(df, table_name='X')
@@ -402,33 +437,42 @@ def test_consistency_check() -> None:
         ('a1', [2, 3.1, 0, 1, 4,   2, 1]),
         ('c', [8, 2, 5, 1, -2, -1, 4]),
     ])
-    
+
     out = io.StringIO()
     with pu.redirect_stdouterr(out, out):
         pdu.consistency_check(df, 'a', 'a1')
 
 
+@pytest.mark.parametrize('entries', [
+    ['2023-04-22 10:40:22', '2023-03-01 00:00:00'],
+    ['2023-04-22', '2023-03-01', "NaT"],
+])
+def test_to_datetime_ser(entries: List[str]) -> None:
+    pd_testing.assert_series_equal(
+        pdu.to_datetime_ser(entries), pd.Series(pd.to_datetime(entries)))
+
+
 def test_truncate_datetime_to_freq() -> None:
-    x = pd.Series(pd.to_datetime(['2023-04-22 10:40:22', '2023-03-01']))
-    
+    x = pdu.to_datetime_ser(['2023-04-22 10:40:22', '2023-03-01 00:00:00'])
+
     pd_testing.assert_series_equal(
         pdu.truncate_datetime_to_freq(x, 'D'),
-        pd.Series(pd.to_datetime(['2023-04-22', '2023-03-01'])))
-    
+        pdu.to_datetime_ser(['2023-04-22', '2023-03-01']))
+
     pd_testing.assert_series_equal(
         pdu.truncate_datetime_to_freq(x, 'M'),
-        pd.Series(pd.to_datetime(['2023-04-01', '2023-03-01'])))
-    
+        pdu.to_datetime_ser(['2023-04-01', '2023-03-01']))
+
     pd_testing.assert_series_equal(
         pdu.truncate_datetime_to_freq(x, 'W'),
-        pd.Series(pd.to_datetime(['2023-04-17', '2023-02-27'])))
+        pdu.to_datetime_ser(['2023-04-17', '2023-02-27']))
 
 
 def test_truncate_datetime_to_month() -> None:
     df = pd.DataFrame({'dt': pd.to_datetime(['2017-09-12', '2017-10-20'])})
-    
+
     df['dtm'] = pdu.truncate_datetime_to_month(df['dt'])
-    
+
     pd_testing.assert_frame_equal(
         df, pdu.from_items([
         ('dt', pd.to_datetime(['2017-09-12', '2017-10-20'])),
@@ -437,10 +481,10 @@ def test_truncate_datetime_to_month() -> None:
 
 def test_truncate_datetime_to_week() -> None:
     df = pd.DataFrame({'dt': pd.to_datetime(['2017-09-11', '2017-09-24'])})
-    
+
     df['dtm'] = pdu.truncate_datetime_to_week(df['dt'])
     df['dtm_sun'] = pdu.truncate_datetime_to_week(df['dt'], sunday_first=True)
-    
+
     pd_testing.assert_frame_equal(
         df, pdu.from_items([
             ('dt', pd.to_datetime(['2017-09-11', '2017-09-24'])),
@@ -452,14 +496,26 @@ def test_truncate_datetime_to_week() -> None:
 def test_datetime_to_epoch() -> None:
     pd_testing.assert_series_equal(
         pdu.datetime_to_epoch(
-            pd.Series(pd.to_datetime(["1970-01-01", "1970-01-01 0:01:02.345",
-                                      "NaT"]))),
+            pdu.to_datetime_ser(
+                ["1970-01-01 00:00:00.0", "1970-01-01 0:01:02.345", "NaT"])),
         pd.Series([0., 62.345, nan]), check_exact=True)
-    
+
     pd_testing.assert_series_equal(
         pdu.datetime_to_epoch(
-            pd.Series([pd.to_datetime("1970-01-01 1:00:00")])),
+            pdu.to_datetime_ser(["1970-01-01 1:00:00"])),
         pd.Series([3600.]))
+
+
+def test_convert_to_timezone() -> None:
+    ser = pdu.to_datetime_ser(
+        ['2022-02-01 23:05:00', '2022-06-05 10:20:00'])
+    ser_berlin = pdu.convert_to_timezone(ser, 'Europe/Helsinki')
+    pd_testing.assert_series_equal(
+        ser_berlin.dt.day, pd.Series([2, 5], dtype=np.int32))
+    pd_testing.assert_series_equal(
+        ser_berlin.dt.hour, pd.Series([1, 13], dtype=np.int32))
+    pd_testing.assert_series_equal(
+        ser_berlin.dt.minute, pd.Series([5, 20], dtype=np.int32))
 
 
 def test_to_csv() -> None:
@@ -472,3 +528,5 @@ def test_to_csv() -> None:
     pdu.to_csv(df, out)
 
     assert out.getvalue() == "b;a\n3;first\n8;second\n"
+
+

@@ -4,6 +4,9 @@ Utilities and convenience functions for using `pandas`.
 import re
 import contextlib
 import collections
+import datetime
+import dateutil.tz
+import pytz
 from typing import Optional, Union, List, Tuple, Any, Dict
 from collections.abc import Sequence, Generator
 import types
@@ -76,7 +79,7 @@ def is_numerical(ser: pd.Series) -> bool:
 
 def get_colnames(X_or_names: Any) -> List[str]:
     """Get columns from an object carrying column names
-    
+
     Args:
         X_or_names (`pd.DataFrame` or `DataFrameGroupBy` or seq of str):
             input carrying column names
@@ -128,7 +131,7 @@ def category_colnames(
     else:
         return selected
 
-    
+
 def rename_column(X: pd.DataFrame, old_name: str, new_name: str) -> None:
     """Rename a column in the passed dataframe (in place).
 
@@ -144,7 +147,7 @@ def rename_column(X: pd.DataFrame, old_name: str, new_name: str) -> None:
         raise KeyError('column {} not found'.format(old_name))
     X.rename(columns={old_name: new_name}, inplace=True)
 
-    
+
 def drop_index(X: pd.DataFrame) -> pd.DataFrame:
     """Drop the index from a dataframe in place.
 
@@ -200,7 +203,7 @@ def shuffle_df_drop_index(df: pd.DataFrame) -> pd.DataFrame:
         `pd.DataFrame`: new dataframe
     """
     import sklearn.utils
-    
+
     df = sklearn.utils.shuffle(df)
     drop_index(df)
     return df
@@ -222,7 +225,7 @@ def assert_frame_contents_equal(
     pd_testing.assert_frame_equal(
         df1.reset_index(drop=True), df2.reset_index(drop=True), **kwargs)
 
-        
+
 def ser_where_defined(ser: pd.Series) -> pd.Series:
     """Select non-null entries of a series.
 
@@ -246,6 +249,39 @@ def n_undefined_and_percentage(ser: pd.Series) -> Tuple[int, float]:
     return pu.wi_perc(ser.isnull().sum(), len(ser))
 
 
+def n_undefined(ser: pd.Series) -> int:
+    """number of undefined entries in a series
+
+    Args:
+        ser: Series
+    Returns:
+        number of undefined entries
+    """
+    return ser.isnull().sum()
+
+
+def defined_everywhere(ser: pd.Series) -> bool:
+    """Are all entries of a series defined?
+
+    Args:
+        ser: Series
+    Returns:
+        whether there are no missing/undefined values
+    """
+    return n_undefined(ser) == 0
+
+
+def fill_forward_then_backward(ser: pd.Series) -> pd.Series:
+    """Fill missing values in a series first forward, then backward.
+
+    Args:
+        ser: input Series
+    Returns:
+        output Series
+    """
+    return ser.ffill().bfill()
+
+
 def colname_list(colnames: Union[str, Sequence[str]]) -> Sequence[str]:
     """If the input is a string, turn it into a one-element list, otherwise just
     return the input.
@@ -258,7 +294,7 @@ def colname_list(colnames: Union[str, Sequence[str]]) -> Sequence[str]:
     if pu.isstring(colnames):
         return [colnames]
     return colnames
-    
+
 
 def sort(
         X: pd.DataFrame, colnames: Union[str, Sequence[str]] = None,
@@ -305,7 +341,7 @@ def sorted_unique_1dim(ser: ArrayLike) -> pd.Series:
 
 def left_merge(left: pd.DataFrame, right: pd.DataFrame, **kwargs) -> pd.DataFrame:
     """Convience function for a left merge in Pandas.
-    
+
     `pd.DataFrame.merge` may produce result columns to in a different order
     if the left dataframe is empty. The (empty) index is also of a different
     type than for nonempty dataframes. This causes problems in `dask`. This
@@ -328,7 +364,7 @@ def left_merge(left: pd.DataFrame, right: pd.DataFrame, **kwargs) -> pd.DataFram
     """
     assert 'how' not in kwargs
     df = left.merge(right, how='left', **kwargs)
-    
+
     left_colnames = left.columns.tolist()
     if (len(df) == 0 and
             df.columns.tolist()[:len(left_colnames)] != left_colnames):
@@ -370,7 +406,7 @@ def _fast_groupby_multi_transform1(
 
         f(work_columns_slice)
         row_of_group_start = row_of_group_end
-        
+
 
 _fast_groupby_multi_transform1_jit = numba.njit(_fast_groupby_multi_transform1)
 
@@ -423,7 +459,7 @@ def fast_groupby_multi_transform(
         raise ValueError(
             f"result_colnames {result_colnames} is not a subset of work_colnames "
             f"{work_colnames}")
-        
+
     further_sort_colnames = colname_list(further_sort_colnames)
     if not already_sorted:
         df.sort_values(group_colnames + further_sort_colnames, inplace=True,
@@ -462,7 +498,7 @@ def rename_groupby_colnames(
     """Rename column names as they arise from groupby-calls.
 
     The dataframe is changed in place.
-    
+
     If a column has multiple aggregations, the tuple column names are combined
     with underscores. Otherwise just the column is used.
 
@@ -478,13 +514,13 @@ def rename_groupby_colnames(
     assert name_for_count is None or pu.isstring(name_for_count)
     if not isinstance(renamings, dict):
         renamings = dict(renamings)
-        
+
     aggs_for_colname = collections.defaultdict(list)
     for colname, agg_name in df.columns:
         if name_for_count is not None and agg_name == 'count':
             continue
         aggs_for_colname[colname].append(agg_name)
-        
+
     new_colnames = []
     for colname, agg_name in df.columns:
         if name_for_count is not None and agg_name == 'count':
@@ -498,7 +534,7 @@ def rename_groupby_colnames(
         new_colname = renamings.get(new_colname, new_colname)
         new_colnames.append(new_colname)
     df.columns = new_colnames
-    
+
     if len(renamings) > 0:
         if isinstance(df.index, pd.MultiIndex):
             for i_level in range(len(df.index.levels)):
@@ -515,7 +551,7 @@ def print_column_info(
         ignored_columns: Sequence[str] = (), n_value_counts: int = 50
 ) -> None:
     """Print information about a column
-    
+
     For a column, print its `dtype`, call `describe`, count the missing
     values, count the distinct values and print the `value_counts` of up to
     `n_value_counts` most frequent values.
@@ -538,7 +574,7 @@ def print_column_info(
     print(f"column dtype: {col.dtype}, length {len(col)}")
     if colname in ignored_columns:
         return
-    
+
     print()
     print("describe:")
     print(col.describe())
@@ -556,13 +592,13 @@ def print_column_info(
         print("value counts of the 50 most frequent values:")
         print(value_counts.iloc[:50])
 
-        
+
 def print_table_info(
         df: pd.DataFrame, table_name: str,
         ignored_columns: Sequence[str] = (), n_value_counts: int = 50
 ) -> None:
     """Print information about a dataframe's columns.
-    
+
     For a dataframe, print its shape, column dtypes and call
     `print_column_info` for each column (except the ones in `ignored_columns`).
 
@@ -598,7 +634,7 @@ def consistency_check(
     """
     ser_a = df[colname_a]
     ser_b = df[colname_b]
-    
+
     print(f"consistency check of {ser_a.name} and {ser_b.name}")
     a_isnull = ser_a.isnull()
     is_same = (ser_a == ser_b) | (a_isnull & (a_isnull == ser_b.isnull()))
@@ -619,7 +655,7 @@ def consistency_check(
             print(f"the last {len(examples)} inconsistencies:")
         print(examples)
 
-        
+
 def keys_of_dict_column(ser: pd.Series) -> pd.Series:
     """Transform a series with dict values into a series with the lists of their
     keys.
@@ -644,6 +680,17 @@ def distinct_keys_of_dict_column(ser: pd.Series) -> np.ndarray:
     return np.unique(keys_of_dict_column(ser))
 
 
+def to_datetime_ser(entries: ArrayLike) -> pd.Series:
+    """Convert an array of date strings into a datetimens series.
+
+    Args:
+        entries: date strings to be converted
+    Returns:
+        series of type datetimens
+    """
+    return pd.Series(pd.to_datetime(entries))
+
+
 def truncate_datetime_to_freq(ser: pd.Series, freq: str) -> pd.Series:
     """Truncate datetime values to the specified period.
 
@@ -660,7 +707,7 @@ def truncate_datetime_to_month(ser: pd.Series) -> pd.Series:
     """Truncate datetime values to the beginning of the month.
 
     Special case of `truncate_datetime_to_freq` with frequency 'M'.
-    
+
     Args:
         ser (`pd.Series`): input series
     Returns:
@@ -674,7 +721,7 @@ def truncate_datetime_to_week(ser: pd.Series, sunday_first: bool = False) -> pd.
     """Truncate datetime values to the beginning of the week.
 
     Special case of `truncate_datetime_to_freq`.
-    
+
     Args:
         ser (`pd.Series`): input series
         sunday_first (bool): whether to consider Sunday the beginning of the week;
@@ -696,7 +743,7 @@ MIN_DATETIME = pd.to_datetime("1970-01-01")
 def datetime_to_epoch(ser: pd.Series) -> pd.Series:
     """Convert a Pandas datetime series to a float epoch, including the
     nanoseconds.
-    
+
     NaT values are converted to NaT values.
 
     Args:
@@ -705,6 +752,70 @@ def datetime_to_epoch(ser: pd.Series) -> pd.Series:
         `pd.Series`: output series containing float epochs
     """
     return (ser - MIN_DATETIME).dt.total_seconds()
+
+
+def convert_to_timezone(
+        ser: pd.Series,
+        tz: Union[str, pytz.timezone, dateutil.tz.tzfile, datetime.tzinfo]
+) -> pd.Series:
+    """Convert a timezone-naive datetime column in UTC to the given timezone
+
+    Args:
+        ser: input series (datetime)
+        tz: time zone to convert to
+    Returns:
+        output series
+    """
+    return ser.dt.tz_localize(pytz.utc).dt.tz_convert(tz)
+
+
+def add_missing_days(dfg: pd.DataFrame, end_date: Optional[datetime.date] = None
+                   ) -> pd.DataFrame:
+    """For the groupby-result of a daily aggregation, add the missing days by
+    reindexing the dataframe.
+
+    That is we use a MultiIndex to create the Cartesian product.
+
+    Args:
+        dfg: input dataframe; it must have a `MultiIndex` with the second
+            index level being the date.
+        date_end: The final date to reconstruct in the reindexing. This way,
+            further dates can be added at the end. By default the maximum
+            date is taken.
+    Returns:
+        reindexed dataframe; the former index levels are also turned into
+            columns. Please fill the resulting NaN entries where appropriate,
+            e.g. by setting them to 0 (for sales) or forward filling them
+            (for features)
+    """
+    n_levels_found = dfg.index.nlevels
+    if n_levels_found < 2:
+        raise ValueError("Only MultiIndices with at least 2 levels allowed, "
+                         f"found {n_levels_found} levels")
+
+    dates = dfg.index.get_level_values(1)
+
+    if end_date is None:
+        date_end = dates.max()
+    else:
+        date_end = pd.to_datetime(end_date)
+
+    def index_of_level(i_level: int) -> pd.Series:
+        return pdu.sorted_unique_1dim(dfg.index.get_level_values(i_level))
+
+    index_levels = [
+        index_of_level(0),
+        pd.Series(
+            pd.date_range(dates.min(), date_end, freq='D'),
+            name=dfg.index.names[1])
+    ]
+    for i_level in range(2, n_levels_found):
+        index_levels.append(index_of_level(i_level))
+
+    dfg = dfg.reindex(pd.MultiIndex.from_product(index_levels))
+    dfg.reset_index(inplace=True)
+
+    return dfg
 
 
 def to_csv(df: pd.DataFrame, filepath: str, **kwargs) -> None:

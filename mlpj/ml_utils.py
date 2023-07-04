@@ -263,9 +263,6 @@ class OnColsTrans(sklearn.base.BaseEstimator, sklearn.base.TransformerMixin,
 
     The feature matrix is expected to be a `pd.DataFrame`.
 
-    In the methods `get_params`, `set_params`, `OnColsTrans` just delegates
-    to the base transformer.
-
     Args:
         est: base transformer to be wrapped
         used_features: column names to restrict to
