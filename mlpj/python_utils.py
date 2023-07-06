@@ -1,6 +1,7 @@
 """
 Utilities and convenience functions for using the Python standard library.
 """
+import re
 import os
 import sys
 import sqlite3
@@ -50,7 +51,7 @@ def if_true(flag: bool, value: Any, default: str = '') -> Any:
         return value
     else:
         return default
-    
+
 
 def wi_perc(value: float, reference: float) -> Tuple[float, float]:
     """Return the value and the percentage of the value in the reference.
@@ -120,17 +121,30 @@ def make_path_relative_to(filepath: str, reference_path: str) -> str:
     return os.path.join(*(['..'] * (n_ref - i) + parts[i:]))
 
 
+def filepath_in_dir_of(filename: str, filepath_in_same_dir: str) -> str:
+    """Take the directory of the given filepath and add the given filename to
+    it.
+
+    Args:
+        filename: a filename for the directory
+        filepath_in_same_dir: a filepath defining the directory
+    Returns:
+        composed filepath
+    """
+    return os.path.join(os.path.dirname(filepath_in_same_dir), filename)
+
+
 @contextlib.contextmanager
 def redirect_stdouterr(outfp: TextIO, errfp: TextIO) -> Generator[None]:
     """Context manager for temporary redirection of `sys.stdout` and
     `sys.stderr`.
-    
+
     Args:
         outfp (output stream): output stream to redirect the standard output
             stream to (default=`os.devnull`)
         errfp (output stream): path or output stream to redirect
             the standard error stream to (default=`os.devnull`)
-    
+
     If you want to keep one of the two unchanged, just pass `sys.stdout` or
     `sys.stderr`, respectively.
     """
@@ -146,7 +160,7 @@ def redirect_stdouterr(outfp: TextIO, errfp: TextIO) -> Generator[None]:
         sys.stdout = old_stdout
         sys.stderr = old_stderr
 
-        
+
 class BranchedOutputStreams:
     """Output stream that delegates to multiple other output streams
 
@@ -175,7 +189,7 @@ class BranchedOutputStreams:
         for stream in self.streams:
             stream.close()
 
-        
+
 @contextlib.contextmanager
 def open_overwriting_safely(
         filepath: str, mode: int
@@ -221,7 +235,7 @@ def ansiicol(color_num: int, is_bright: bool = False) -> str:
     else:
         bright_part = ''
     return f"\x1b[{color_num}{bright_part}m"
-    
+
 
 TERMSEQ = {
     'red[': ansiicol(31),
@@ -265,7 +279,7 @@ SECONDS_IN_HOUR = 3600
 
 SECONDS_IN_DAY = 24 * SECONDS_IN_HOUR
 
-    
+
 def n_days_ago(n_days: int) -> datetime.datetime:
     """The datetime object for the day n_days days ago
 
@@ -275,6 +289,17 @@ def n_days_ago(n_days: int) -> datetime.datetime:
         `datetime.datetime`: datetime object for that day in the past
     """
     return datetime.date.today() - datetime.timedelta(n_days)
+
+
+def n_days_from_today(n_days: int) -> datetime.datetime:
+    """The datetime object for the day n_days from today
+
+    Args:
+        n_days (int): number of days to go into the future
+    Returns:
+        `datetime.datetime`: datetime object for that day in the future
+    """
+    return datetime.date.today() + datetime.timedelta(n_days)
 
 
 def today_isoformat() -> str:
@@ -303,3 +328,15 @@ def create_console_logger(module: str, level: int = logging.DEBUG) -> logging.Lo
     logger.addHandler(handler)
 
     return logger
+
+
+def strip_margin(text: str) -> str:
+    """After each newline in the string, strip the whitespace part before a
+    vertical bar just like in Scala.
+
+    Args:
+        text: input string
+    Returns:
+        output string
+    """
+    return re.sub('\n[ \t]*[|]', '\n', text)

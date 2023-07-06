@@ -10,7 +10,7 @@ github_url = 'https://github.com/bdanielby/mlpj'
 
 setup(
     name='mlpj',
-    version='0.2.3',
+    version='0.2.4',
     description='Tools for machine learning projects',
     long_description=read('README.md'),
     long_description_content_type='text/markdown',
@@ -33,7 +33,7 @@ setup(
         'Intended Audience :: Science/Research',
         'Intended Audience :: Information Technology',
         'Intended Audience :: Manufacturing',
-        'License :: OSI Approved :: MIT License',  
+        'License :: OSI Approved :: MIT License',
         'Operating System :: POSIX :: Linux',
         'Operating System :: MacOS',
         'Operating System :: Microsoft :: Windows',

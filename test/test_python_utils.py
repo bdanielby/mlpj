@@ -8,6 +8,8 @@ import io
 import tempfile
 import datetime
 
+import pytest
+
 from mlpj import python_utils as pu
 
 
@@ -41,7 +43,7 @@ def test_perc_str() -> None:
 def test_first_of_each_item() -> None:
     assert pu.first_of_each_item([('a', 3, 9), ('b', 4), ('c',)]) == [
         'a', 'b', 'c']
-    
+
     assert (
         pu.first_of_each_item(collections.OrderedDict([('A', 3), ('B', 4)])
                               .items())
@@ -65,7 +67,16 @@ def test_make_path_relative_to() -> None:
 
     assert pu.make_path_relative_to('/ab//cd//d/e/', '/ab//cd/') == 'd/e'
     assert pu.make_path_relative_to('/ab//cd//d/e/', '/ab//cd//d2') == '../d/e'
-    
+
+
+@pytest.mark.parametrize('filename, filepath, xpd', [
+    ('bar.txt', 'foo/xx', 'foo/bar.txt'),
+    ('bar.txt', '/foo/xx', '/foo/bar.txt'),
+    ('bar.txt', '/', '/bar.txt'),
+])
+def test_filepath_in_dir_of(filename: str, filepath: str, xpd: str) -> None:
+    assert pu.filepath_in_dir_of(filename, filepath) == xpd
+
 
 def test_redirect_stdouterr() -> None:
     out = io.StringIO()
@@ -95,7 +106,7 @@ def test_BranchedOutputStreams() -> None:
 def test_open_overwriting_safely() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         filepath = os.path.join(tmpdir, 'foo.txt')
-        
+
         original_output = "foo\nbar\n"
         with open(filepath, 'w') as fout:
             fout.write(original_output)
@@ -103,7 +114,7 @@ def test_open_overwriting_safely() -> None:
         def contents(filepath):
             with open(filepath) as fin:
                 return fin.read()
-            
+
         new_output = "new output\n"
         try:
             with pu.open_overwriting_safely(filepath, 'w') as fout:
@@ -113,7 +124,7 @@ def test_open_overwriting_safely() -> None:
             pass
 
         assert contents(filepath) == original_output
-        
+
         with pu.open_overwriting_safely(filepath, 'w') as fout:
             fout.write(new_output)
         assert contents(filepath) == new_output
@@ -135,6 +146,20 @@ def test_n_days_ago() -> None:
     assert (today - pu.n_days_ago(5)) == datetime.timedelta(days=5)
 
 
+def test_n_days_from_today() -> None:
+    today = datetime.date.today()
+    assert (pu.n_days_from_today(5) - today) == datetime.timedelta(days=5)
+
+
 def test_today_isoformat() -> None:
     today = datetime.date.today()
     assert pu.today_isoformat() == today.strftime("%Y-%m-%d")
+
+
+@pytest.mark.parametrize('input, xpd', [
+    ('line1\n   |line2\n\t  |line3\n  line4',
+     'line1\nline2\nline3\n  line4'),
+    ('', ''),
+])
+def test_strip_margin(input: str, xpd: str) -> None:
+    assert pu.strip_margin(input) == xpd

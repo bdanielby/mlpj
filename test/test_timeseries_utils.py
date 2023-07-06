@@ -13,10 +13,11 @@ from mlpj import timeseries_utils as tsu
 def test_remove_last_n_days() -> None:
     df = pdu.from_items([
         ('date', pd.to_datetime(
-            [pu.n_days_ago(20), pu.n_days_ago(5), pu.n_days_ago(10)])),
-        ('a', [2, 3, 1])
+            [pu.n_days_ago(20), pu.n_days_ago(5), pu.n_days_ago(10),
+             pu.n_days_from_today(5)])),
+        ('a', [2, 3, 1, 8])
     ])
-    
+
     df1 = tsu.remove_last_n_days(df, 'date', 10)
     pdu.assert_frame_contents_equal(
         df1,
@@ -25,7 +26,7 @@ def test_remove_last_n_days() -> None:
             ('a', [2, 1])
         ]))
 
-    
+
 def test_ts_train_test_split() -> None:
     df = pdu.from_items([
         ('date', pd.to_datetime(['2023-03-05', '2023-01-15', '2023-02-01'])),

@@ -518,6 +518,62 @@ def test_convert_to_timezone() -> None:
         ser_berlin.dt.minute, pd.Series([5, 20], dtype=np.int32))
 
 
+def test_add_missing_days_one_level() -> None:
+    df = pdu.from_items([
+        ('date', pd.to_datetime(['2020-02-01', '2020-02-03'])),
+        ('a', [2, 3])
+    ]).set_index('date')
+
+    expd = pdu.from_items([
+        ('date',
+         pd.to_datetime(['2020-02-01', '2020-02-02', '2020-02-03',
+                         '2020-02-04', '2020-02-05'])),
+        ('a', [2, nan, 3, nan, nan])])
+
+    pd_testing.assert_frame_equal(
+        pdu.add_missing_days(df, end_datetime='2020-02-05'),
+        expd)
+
+    pd_testing.assert_frame_equal(
+        pdu.add_missing_days(df, end_datetime='2020-02-05', reset_index=False),
+        expd.set_index('date'))
+
+    pd_testing.assert_frame_equal(
+        pdu.add_missing_days(df),
+        pdu.from_items([
+            ('date',
+             pd.to_datetime(['2020-02-01', '2020-02-02', '2020-02-03'])),
+            ('a', [2, nan, 3])]))
+
+
+def test_add_missing_days_multiple_levels() -> None:
+    df = pdu.from_items([
+        ('a', [0, 0, 0, 1, 1]),
+        ('date',
+         pd.to_datetime([
+             '2023-07-03', '2023-07-03', '2023-07-17',
+             '2023-07-03', '2023-07-17'])),
+        ('c', [5, 6, 5, 5, 6]),
+        ('d', [10, 11, 12, 13, 14])
+    ]).set_index(['a', 'date', 'c'])
+
+    print(
+        pdu.add_missing_days(df, '2023-07-31', freq='W-MON'))
+    pd_testing.assert_frame_equal(
+        pdu.add_missing_days(df, '2023-07-31', freq='W-MON'),
+        pdu.from_items([
+            ('a', [0] * 10 + [1] * 10),
+            ('date',
+             pd.to_datetime((
+                 ['2023-07-03'] * 2 + ['2023-07-10'] * 2 + ['2023-07-17'] * 2
+                 + ['2023-07-24'] * 2 + ['2023-07-31'] * 2
+             ) * 2)),
+            ('c', [5, 6] * 10),
+            ('d', [10, 11, nan, nan, 12, nan, nan, nan, nan, nan,
+                   13, nan, nan, nan, nan, 14, nan, nan, nan, nan]),
+        ]))
+
+
 def test_to_csv() -> None:
     df = pdu.from_items([
         ('b', np.array([3, 8])),

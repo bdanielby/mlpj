@@ -769,19 +769,26 @@ def convert_to_timezone(
     return ser.dt.tz_localize(pytz.utc).dt.tz_convert(tz)
 
 
-def add_missing_days(dfg: pd.DataFrame, end_date: Optional[datetime.date] = None
+def add_missing_days(dfg: pd.DataFrame, end_datetime: Optional[Any] = None,
+                   freq: str = 'D', reset_index: bool = True
                    ) -> pd.DataFrame:
     """For the groupby-result of a daily aggregation, add the missing days by
     reindexing the dataframe.
 
-    That is we use a MultiIndex to create the Cartesian product.
+    A MultiIndex is used to create the Cartesian product of all three
+    levels. For the datetime level among them (which must exist), add
+    entries up to `end_datetime`.
 
     Args:
-        dfg: input dataframe; it must have a `MultiIndex` with the second
-            index level being the date.
-        date_end: The final date to reconstruct in the reindexing. This way,
-            further dates can be added at the end. By default the maximum
-            date is taken.
+        dfg: input dataframe; it must have a `MultiIndex` with one of the
+            index levels being the date.
+        end_datetime (must be convertible with `pd.to_datetime`): The final
+            datetime to reconstruct in the reindexing.
+            This way, further datetimes can be added at the end. By
+            default the maximum datetime is taken.
+        freq: frequency alias to use within `pd.date_range`
+        reset_index: whether to call `reset_index` in the end, which is often
+            useful after a groupby operation
     Returns:
         reindexed dataframe; the former index levels are also turned into
             columns. Please fill the resulting NaN entries where appropriate,
@@ -789,31 +796,34 @@ def add_missing_days(dfg: pd.DataFrame, end_date: Optional[datetime.date] = None
             (for features)
     """
     n_levels_found = dfg.index.nlevels
-    if n_levels_found < 2:
-        raise ValueError("Only MultiIndices with at least 2 levels allowed, "
-                         f"found {n_levels_found} levels")
 
-    dates = dfg.index.get_level_values(1)
+    new_index_levels = []
+    datetime_level_found = False
+    for i_level in range(n_levels_found):
+        level_vals = dfg.index.get_level_values(i_level)
+        if level_vals.dtype.name.startswith('datetime'):
+            if end_datetime == None:
+                date_end = level_vals.max()
+            else:
+                date_end = pd.to_datetime(end_datetime)
+            new_level_vals = pd.Series(
+                pd.date_range(level_vals.min(), date_end, freq=freq),
+                name=dfg.index.names[i_level])
+            datetime_level_found = True
+        else:
+            new_level_vals = sorted_unique_1dim(level_vals)
+        new_index_levels.append(new_level_vals)
 
-    if end_date is None:
-        date_end = dates.max()
+    if not datetime_level_found:
+        raise ValueError("No datetime index level found")
+    if n_levels_found == 1:
+        new_index = new_index_levels[0]
     else:
-        date_end = pd.to_datetime(end_date)
+        new_index = pd.MultiIndex.from_product(new_index_levels)
+    dfg = dfg.reindex(new_index)
 
-    def index_of_level(i_level: int) -> pd.Series:
-        return pdu.sorted_unique_1dim(dfg.index.get_level_values(i_level))
-
-    index_levels = [
-        index_of_level(0),
-        pd.Series(
-            pd.date_range(dates.min(), date_end, freq='D'),
-            name=dfg.index.names[1])
-    ]
-    for i_level in range(2, n_levels_found):
-        index_levels.append(index_of_level(i_level))
-
-    dfg = dfg.reindex(pd.MultiIndex.from_product(index_levels))
-    dfg.reset_index(inplace=True)
+    if reset_index:
+        dfg.reset_index(inplace=True)
 
     return dfg
 
