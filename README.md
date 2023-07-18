@@ -28,18 +28,17 @@ Contents of this repository:
     * histograms
     * profile plots
   * [timeseries_utils](mlpj/timeseries_utils.py): for timeseries models
-    * timeseries train-test split
   * [ml_utils](mlpj/ml_utils.py): for `sklearn` and other standard machine
     learning libraries
-    * types for sklearn estimators and transformers
+    * types (Protocols) for sklearn estimators and transformers
     * Find an enclosed estimator or transformer within a meta-estimator.
-    * functions to print analyses of trained models
+    * functions to print analyses of certain kinds of trained models
     * meta-estimators and meta-transformers
 * [project_utils](mlpj/project_utils.py): project management utilities
   * [actions_looper](mlpj/actions_looper.py): Execute selected parts of your
     program based on persisted results of earlier steps. Together with the
-    result display mentioned below, this is meant as an alternative to Jupyter
-    notebooks that integrates more seamlessly with library development and
-    test-driven development.
+    functionality mentioned below, this is meant as an alternative to Jupyter
+    notebooks that integrates more seamlessly with reuse of code and
+    test-driven development (TDD) while still being fairly interactive.
   * [result_display](mlpj/result_display.py): Collect textual and numerical
     results and plots on HTML pages.
