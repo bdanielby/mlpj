@@ -261,8 +261,7 @@ class HTMLDisplay(object):
         finally:
             if tool == 'matplotlib':
                 plt.savefig(plot_filepath)
-                if old_backend != 'Agg':
-                    matplotlib.use(old_backend)
+                matplotlib.rcParams['backend'] = old_backend
 
         # atomic creation of the image (important for refresh)
         os.rename(plot_filepath, orig_plot_filepath)
