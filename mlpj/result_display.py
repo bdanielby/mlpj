@@ -16,6 +16,7 @@ import markupsafe
 import numpy as np
 import pandas as pd
 
+import matplotlib
 import matplotlib.pyplot as plt
 import lockfile
 
@@ -88,21 +89,21 @@ class HTMLDisplay(object):
             os.makedirs(db_path_dir)
         self._init_db_if_necessary()
 
-        self.project_name = project_name        
+        self.project_name = project_name
         self.db_path = db_path
-        
+
         self.html_dir = html_dir
         pu.makedir_unless_exists(self.html_dir)
-        
+
         self.image_dir = image_dir
         pu.makedir_unless_exists(self.image_dir)
-        
+
         self.html_index_filename = 'index.html'
         self.default_figsize = default_figsize
         self.further_html_headers = further_html_headers
         self.refresh_how_long = refresh_how_long
         self.refresh_not_started_after = refresh_not_started_after
-    
+
     @contextlib.contextmanager
     def printer(self, key: str, suppl: bool = False, silence_stdout: bool = False,
               preformatted: bool = True) -> None:
@@ -112,7 +113,7 @@ class HTMLDisplay(object):
 
         If there's an exception in the user block, the outputs printed so far
         are preserved.
-        
+
         Args:
             key (str): result key
             suppl (bool): If `True`, the database entry isn't replaced but
@@ -139,7 +140,7 @@ class HTMLDisplay(object):
         regenerate the corresponding HTML page.
 
         Do nothing if the content is blank.
-        
+
         Args:
             key (str): result key
             content (str): to be printed
@@ -156,7 +157,7 @@ class HTMLDisplay(object):
         if preformatted:
             content = f"<pre>{content}</pre>"
         self.add_db_entry(key, content, suppl=suppl)
-        
+
     @contextlib.contextmanager
     def savefig(self, key: str, tool: str = 'matplotlib', with_printer: bool = True,
               with_libstyle: bool = True, figsize: Optional[Tuple[float, float]] = None,
@@ -172,13 +173,13 @@ class HTMLDisplay(object):
 
         If there's an exception in the user block, the old entry in the database
         and the HTML log will remain untouched.
-        
+
         Args:
             key (str): result key
             tool ('matplotlib' | 'system'):
                 For `matplotlib`, `plt.figure(1, figsize=figsize)` is called
                 initially and after executing the block converted to the PNG file.
-        
+
                 For `system`, the PNG filepath is available as a with-variable
                 for saving the plot under this path.
 
@@ -194,7 +195,7 @@ class HTMLDisplay(object):
                 periodically.
             tight_layout (bool): If `True`, call `plt.tight_layout()` in the end.
             close_all (bool): If `True`, call `plt.close('all')` in the end.
-            
+
             suppl (bool): If `True`, the database entry isn't replaced but
                 supplemented.
             silence_stdout (bool): If `True`, the content won't be printed but
@@ -208,61 +209,72 @@ class HTMLDisplay(object):
         orig_plot_filepath = plot_filepath
         plot_filepath = re.sub(r'(\.[^.]+)$', r'.part\1', plot_filepath)
         description = ""
-        
+
         if figsize is None:
             figsize = self.default_figsize
         elif tool not in ('r', 'matplotlib'):
             raise NotImplementedError('figsize for system')
 
-        if tool == 'matplotlib':
+        old_backend = matplotlib.get_backend()
+
+        def prepare_matplotlib() -> None:
+            if old_backend != 'Agg':
+                matplotlib.use('Agg')
             plt.figure(1, figsize=figsize)
 
-        if with_printer:
-            out = io.StringIO()
-            branched = pu.BranchedOutputStreams((out, sys.stdout))
-            with pu.redirect_stdouterr(branched, branched):
-                with pdu.wide_display():
-                    try:
-                        if tool == 'matplotlib':
-                            if with_libstyle:
-                                with pltu.libstyle():
+        try:
+            if with_printer:
+                out = io.StringIO()
+                branched = pu.BranchedOutputStreams((out, sys.stdout))
+                with pu.redirect_stdouterr(branched, branched):
+                    with pdu.wide_display():
+                        try:
+                            if tool == 'matplotlib':
+                                prepare_matplotlib()
+                                if with_libstyle:
+                                    with pltu.libstyle():
+                                        yield plot_filepath
+                                else:
                                     yield plot_filepath
+                                if tight_layout:
+                                    self._tight_layout()
                             else:
                                 yield plot_filepath
-                            if tight_layout:
-                                self._tight_layout()
-                        else:
+                        finally:
+                            description += out.getvalue()
+            else:
+                #if tool == 'r':
+                #    self._plot_in_r(plot_filepath, pixelsize_args)
+                if tool == 'matplotlib':
+                    prepare_matplotlib()
+                    if with_libstyle:
+                        with pltu.libstyle():
                             yield plot_filepath
-                    finally:
-                        description += out.getvalue()
-        else:
-            #if tool == 'r':
-            #    self._plot_in_r(plot_filepath, pixelsize_args)
-            if tool == 'matplotlib':
-                if with_libstyle:
-                    with pltu.libstyle():
+                    else:
                         yield plot_filepath
+                    if tight_layout:
+                        self._tight_layout()
                 else:
                     yield plot_filepath
-                if tight_layout:
-                    self._tight_layout()
-            else:
-                yield plot_filepath
-        print(f"### new plot arrived: {key}")
-        if tool == 'matplotlib':
-            plt.savefig(plot_filepath)
+            print(f"### new plot arrived: {key}")
+
+        finally:
+            if tool == 'matplotlib':
+                plt.savefig(plot_filepath)
+                if old_backend != 'Agg':
+                    matplotlib.use(old_backend)
 
         # atomic creation of the image (important for refresh)
         os.rename(plot_filepath, orig_plot_filepath)
         plot_filepath = orig_plot_filepath
-        
+
         path = pu.make_path_relative_to(plot_filepath, self.html_dir)
-        
+
         refresh_code = ""
         if refresh_millisec is not None:
             # {p how_long, end_time} are measured in seconds, not milliseconds
             end_time= int(time.time()) + self.refresh_not_started_after
-            
+
             refresh_code = f"""
             <script>
             start_image_refresh_timer(
@@ -272,7 +284,7 @@ class HTMLDisplay(object):
             """
         contents = (f'<img src="{path}"><pre>{description}</pre>'
                     f'{refresh_code}')
-            
+
         self.add_db_entry(key, contents)
         if close_all:
             plt.close('all')
@@ -281,7 +293,7 @@ class HTMLDisplay(object):
         """Add an entry to the Sqlite3 database file for the given key.
 
         After adding the entry, regenerate the result HTML page.
-        
+
         Args:
             key (str): result key
             contents (str): result string (HTML)
@@ -319,11 +331,11 @@ class HTMLDisplay(object):
         """
         filepath = pu.make_path_relative_to(filepath, self.html_dir)
         return f'<a target="_blank" href="{filepath}">{link_text}</a>'
-            
+
     def get_keys(self) -> List[str]:
         """Get all distinct result keys from the database, reverse-ordered by
         timestamp.
-        
+
         Returns:
             list of str: list of result keys
         """
@@ -361,11 +373,11 @@ class HTMLDisplay(object):
             if regex.search(key):
                 selected_keys.append(key)
         self.del_keys(selected_keys)
-        
+
     def get_findings(self) -> List[Any]:
         """Get the contents of the findings table in the database,
         reverse-ordered by timestamp.
-        
+
         Returns:
             list of tuples: rows of the database table
         """
@@ -401,7 +413,7 @@ class HTMLDisplay(object):
             desc_part = 'desc'
         else:
             desc_part = ''
-            
+
         for key, contents, _ in cursor.execute(f"""
             select key, group_concat(contents, "\n"), max(timestamp) as maxts from (
             select key, contents, timestamp from findings
@@ -410,7 +422,7 @@ class HTMLDisplay(object):
         ):
             contents = re.sub(r'<img src="([^"]*)"',
                               r'<img data-src="\1" class="lazy"', contents)
-            
+
             key_parts = key.split(':', maxsplit=1)
             if len(key_parts) == 1:
                 proper_key = key
@@ -421,10 +433,10 @@ class HTMLDisplay(object):
 
             html_filepath = os.path.join(self.html_dir, html_filename)
             existing_entries = all_entries.get(html_filepath, [])
-            
+
             existing_entries.append((proper_key, contents))
             all_entries[html_filepath] = existing_entries
-            
+
         for html_filepath, entries in all_entries.items():
             entries = [
                 (key, markupsafe.Markup(value)) for key, value in entries]
@@ -448,7 +460,7 @@ class HTMLDisplay(object):
         """
         filename = filename_stem + '.png'
         return os.path.join(self.image_dir, filename)
-        
+
     def _get_figure_path(self, key: str) -> str:
         """Check whether the key is valid and determine the filepath for a plot
         file.
