@@ -24,6 +24,8 @@ def estimate_overdispersion(y: ArrayLike, mu: ArrayLike) -> float:
     References:
         * Cameron and Trivedi: Regression Analysis of Count Data
           https://faculty.econ.ucdavis.edu/faculty/cameron/racd2/
+        * Date: Negative Binomial Regression: A Step by Step Guide
+          https://towardsdatascience.com/negative-binomial-regression-f99031bb25b4
     """
     y = np.asarray(y)
     mu = np.asarray(mu)
