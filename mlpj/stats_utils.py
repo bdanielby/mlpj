@@ -22,7 +22,8 @@ def estimate_overdispersion(y: ArrayLike, mu: ArrayLike) -> float:
         alpha: overdispersion parameter
 
     References:
-        * Cameron and Trivedi: Regression Analysis of Count Data
+        * Cameron and Trivedi: Regression Analysis of Count Data, equation 3.40
+          (page 91)
           https://faculty.econ.ucdavis.edu/faculty/cameron/racd2/
         * Date: Negative Binomial Regression: A Step by Step Guide
           https://towardsdatascience.com/negative-binomial-regression-f99031bb25b4
