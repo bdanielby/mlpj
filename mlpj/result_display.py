@@ -104,9 +104,29 @@ class HTMLDisplay(object):
         self.refresh_how_long = refresh_how_long
         self.refresh_not_started_after = refresh_not_started_after
 
+    def _construct_key(
+        self, key: Optional[str], dft_key: Optional[str] = None,
+        kprefix: Optional[str] = None, ksuffix: Optional[str] = None
+    ) -> str:
+        """Construct the key for an entry in the result display from the
+        argumetns key, kprefix and ksuffix
+        """
+        if key is None:
+            assert dft_key is not None
+            key = dft_key
+            if kprefix is not None:
+                key = kprefix + key
+            if ksuffix is not None:
+                kye = key + ksuffix
+        return key
+
     @contextlib.contextmanager
-    def printer(self, key: str, suppl: bool = False, silence_stdout: bool = False,
-              preformatted: bool = True) -> None:
+    def printer(
+        self, key: Optional[str] = None, suppl: bool = False,
+        silence_stdout: bool = False, preformatted: bool = True,
+        dft_key: Optional[str] = None, kprefix: Optional[str] = None,
+        ksuffix: Optional[str] = None
+    ) -> None:
         """Context manager to add the output printed in the context manager's
         block to the database under the given key and regenerate the
         corresponding HTML page.
@@ -121,7 +141,13 @@ class HTMLDisplay(object):
             silence_stdout (bool): If `True`, the content won't be printed but
                 only registered in the database.
             preformatted (bool): If `True`, wrap the content in HTML pre-tags.
+            dft_key: If key is None, this default key is taken, supplemented by
+                kprefix and ksuffix if available
+            kprefix: prefix for the default key
+            ksuffix: suffix for the default key
         """
+        key = self._construct_key(key, dft_key, kprefix, ksuffix)
+
         out = io.StringIO()
         branched = out
         text = None
@@ -134,8 +160,12 @@ class HTMLDisplay(object):
             self.print(key, content, suppl=suppl, silence_stdout=silence_stdout,
                     preformatted=preformatted)
 
-    def print(self, key: str, content: str, suppl: bool = False,
-            silence_stdout: bool = False, preformatted: bool = False) -> None:
+    def print(
+        self, key: str, content: str, suppl: bool = False,
+        silence_stdout: bool = False, preformatted: bool = False,
+        dft_key: Optional[str] = None, kprefix: Optional[str] = None,
+        ksuffix: Optional[str] = None
+    ) -> None:
         """Print and add the output to the database under the given key and
         regenerate the corresponding HTML page.
 
@@ -149,7 +179,13 @@ class HTMLDisplay(object):
             silence_stdout (bool): If `True`, the content won't be printed but
                 only registered in the database.
             preformatted (bool): If `True`, wrap the content in HTML pre-tags.
+            dft_key: If key is None, this default key is taken, supplemented by
+                kprefix and ksuffix if available
+            kprefix: prefix for the default key
+            ksuffix: suffix for the default key
         """
+        key = self._construct_key(key, dft_key, kprefix, ksuffix)
+
         if not content.strip():
             return
         if not silence_stdout:
@@ -159,10 +195,14 @@ class HTMLDisplay(object):
         self.add_db_entry(key, content, suppl=suppl)
 
     @contextlib.contextmanager
-    def savefig(self, key: str, tool: str = 'matplotlib', with_printer: bool = True,
-              with_libstyle: bool = True, figsize: Optional[Tuple[float, float]] = None,
-              refresh_millisec: Optional[float] = None, tight_layout: bool = True,
-              close_all: bool = True
+    def savefig(
+        self, key: str, tool: str = 'matplotlib', with_printer: bool = True,
+        with_libstyle: bool = True,
+        figsize: Optional[Tuple[float, float]] = None,
+        refresh_millisec: Optional[float] = None, tight_layout: bool = True,
+        close_all: bool = True,
+        dft_key: Optional[str] = None, kprefix: Optional[str] = None,
+        ksuffix: Optional[str] = None
     ) -> None:
         """Context manager to convert the plot created in the context manager's
         block into a PNG file
@@ -201,7 +241,13 @@ class HTMLDisplay(object):
             silence_stdout (bool): If `True`, the content won't be printed but
                 only registered in the database.
             preformatted (bool): If `True`, wrap the content in HTML pre-tags.
+            dft_key: If key is None, this default key is taken, supplemented by
+                kprefix and ksuffix if available
+            kprefix: prefix for the default key
+            ksuffix: suffix for the default key
         """
+        key = self._construct_key(key, dft_key, kprefix, ksuffix)
+
         key, plot_filepath = self._get_figure_path(key)
 
         # Make the image creation atomic by using a different filename and
@@ -288,7 +334,9 @@ class HTMLDisplay(object):
         if close_all:
             plt.close('all')
 
-    def add_db_entry(self, key: str, contents: str, suppl: bool = False) -> None:
+    def add_db_entry(
+        self, key: str, contents: str, suppl: bool = False
+    ) -> None:
         """Add an entry to the Sqlite3 database file for the given key.
 
         After adding the entry, regenerate the result HTML page.

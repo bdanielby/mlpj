@@ -479,6 +479,18 @@ def test_truncate_datetime_to_month() -> None:
         ('dtm', pd.to_datetime(['2017-09-01', '2017-10-01']))]))
 
 
+def test_truncate_datetime_to_day() -> None:
+    df = pd.DataFrame(
+        {'dt': pd.to_datetime(['2017-09-12 11:30:00', '2017-10-20 22:01:23'])})
+
+    df['dtd'] = pdu.truncate_datetime_to_day(df['dt'])
+
+    pd_testing.assert_frame_equal(
+        df, pdu.from_items([
+        ('dt', pd.to_datetime(['2017-09-12 11:30:00', '2017-10-20 22:01:23'])),
+        ('dtd', pd.to_datetime(['2017-09-12', '2017-10-20']))]))
+
+
 def test_truncate_datetime_to_week() -> None:
     df = pd.DataFrame({'dt': pd.to_datetime(['2017-09-11', '2017-09-24'])})
 

@@ -21,8 +21,8 @@ setup(
     package_data={'mlpj': ['result_template.html']},
     include_package_data=True,
     install_requires=[
-        'numpy', 'pandas', 'matplotlib', 'numba', 'lockfile', 'jinja2',
-        'markupsafe',
+        'numpy==1.24.4', 'pandas', 'matplotlib', 'numba==0.57.1', 'lockfile',
+        'jinja2', 'markupsafe',
     ],
     project_urls={
         'Homepage': github_url,

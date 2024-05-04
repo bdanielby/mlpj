@@ -9,7 +9,7 @@ import datetime
 import contextlib
 import tempfile
 import logging
-from typing import Any, List, Tuple, Union, TextIO, BinaryIO
+from typing import Any, List, Tuple, Union, TextIO, BinaryIO, Optional
 from collections.abc import Sequence, Generator
 
 

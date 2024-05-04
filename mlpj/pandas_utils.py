@@ -717,6 +717,20 @@ def truncate_datetime_to_month(ser: pd.Series) -> pd.Series:
     return truncate_datetime_to_freq(ser, 'M')
 
 
+def truncate_datetime_to_day(ser: pd.Series) -> pd.Series:
+    """Truncate datetime values to the beginning of the day.
+
+    Special case of `truncate_datetime_to_freq` with frequency 'D'.
+
+    Args:
+        ser (`pd.Series`): input series
+    Returns:
+        `pd.Series` with datetime values truncated to the beginning of the
+        respective day
+    """
+    return truncate_datetime_to_freq(ser, 'D')
+
+
 def truncate_datetime_to_week(ser: pd.Series, sunday_first: bool = False) -> pd.Series:
     """Truncate datetime values to the beginning of the week.
 
