@@ -8,6 +8,7 @@ import logging
 import time
 import io
 import sqlite3
+import datetime
 from typing import Tuple, Optional, List, Union, Any
 
 import contextlib
@@ -120,7 +121,7 @@ class HTMLDisplay(object):
             if kprefix is not None:
                 key = kprefix + key
             if ksuffix is not None:
-                kye = key + ksuffix
+                key = key + ksuffix
         return key
 
     @contextlib.contextmanager
@@ -502,7 +503,7 @@ class HTMLDisplay(object):
         else:
             desc_part = ''
 
-        for key, contents, _ in cursor.execute(f"""
+        for key, contents, timestamp in cursor.execute(f"""
             select key, group_concat(contents, "\n"),
             max(timestamp) as maxts from (
             select key, contents, timestamp from findings
@@ -511,6 +512,8 @@ class HTMLDisplay(object):
         ):
             contents = re.sub(r'<img src="([^"]*)"',
                               r'<img data-src="\1" class="lazy"', contents)
+
+            timestr = datetime.datetime.fromtimestamp(timestamp).strftime('%c')
 
             key_parts = key.split(':', maxsplit=1)
             if len(key_parts) == 1:
@@ -523,12 +526,13 @@ class HTMLDisplay(object):
             html_filepath = os.path.join(self.html_dir, html_filename)
             existing_entries = all_entries.get(html_filepath, [])
 
-            existing_entries.append((proper_key, contents))
+            existing_entries.append((proper_key, contents, timestr))
             all_entries[html_filepath] = existing_entries
 
         for html_filepath, entries in all_entries.items():
             entries = [
-                (key, markupsafe.Markup(value)) for key, value in entries]
+                (key, markupsafe.Markup(value), timestr)
+                for key, value, timestr in entries]
             with pu.open_overwriting_safely(html_filepath, 'w') as fout:
                 fout.write(
                     self.html_template.render(

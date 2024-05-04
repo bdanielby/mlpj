@@ -72,9 +72,10 @@ jQuery(document).ready(function () {
   </head>
 <body>
 <h3>{{display.project_name}}: project log {{html_filepath}}</h3>
-  {% for key, contents in entries %}
+  {% for key, contents, timestr in entries %}
      <a name="{{key}}">
-     <h4 class="result_item"><a href="#{{key}}">{{key}}</a></h4>
+     <h4 class="result_item"><a href="#{{key}}">{{key}}</a>
+       &nbsp; &nbsp; &nbsp; &nbsp; {{timestr}}</h4>
      {{contents}}
   {% endfor %}
 
