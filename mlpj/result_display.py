@@ -123,7 +123,7 @@ class HTMLDisplay(object):
     @contextlib.contextmanager
     def printer(
         self, key: Optional[str] = None, suppl: bool = False,
-        silence_stdout: bool = False, preformatted: bool = True,
+        silence_stdout: bool = False, rendering: str = 'preformatted',
         dft_key: Optional[str] = None, kprefix: Optional[str] = None,
         ksuffix: Optional[str] = None
     ) -> None:
@@ -140,7 +140,12 @@ class HTMLDisplay(object):
                 supplemented.
             silence_stdout (bool): If `True`, the content won't be printed but
                 only registered in the database.
-            preformatted (bool): If `True`, wrap the content in HTML pre-tags.
+            rendering: How to render the output.
+                'preformatted': Wrap the output in `<pre>...</pre>`.
+                'html': The output is expected to be HTML-formatted. Keep it
+                    as is.
+                'markdown': the output is expected to be Markdown-formatted.
+                    Convert it to HTML.
             dft_key: If key is None, this default key is taken, supplemented by
                 kprefix and ksuffix if available
             kprefix: prefix for the default key
@@ -158,16 +163,29 @@ class HTMLDisplay(object):
         finally:
             content = out.getvalue().rstrip()
             self.print(key, content, suppl=suppl, silence_stdout=silence_stdout,
-                    preformatted=preformatted)
+                       rendering=rendering)
 
     def html(self, *args, **kwargs) -> None:
-        """Same as `printer` but with preformatted=False"""
-        kwargs['preformatted'] = False
+        """Same as `printer` but with rendering='html'"""
+        kwargs['rendering'] = 'html'
         return self.printer(*args, **kwargs)
+
+    def markdown(self, *args, **kwargs) -> None:
+        """Same as `printer` but with rendering='markdown'"""
+        kwargs['rendering'] = 'markdown'
+        return self.printer(*args, **kwargs)
+
+    def _format_output(self, content: str, rendering: str) -> str:
+        if rendering == 'preformatted':
+            content = f"<pre>{content}</pre>"
+        elif rendering == 'markdown':
+            import markdown
+            content = markdown.markdown(content)
+        return content
 
     def print(
         self, key: str, content: str, suppl: bool = False,
-        silence_stdout: bool = False, preformatted: bool = False,
+        silence_stdout: bool = False, rendering: str = 'preformatted',
         dft_key: Optional[str] = None, kprefix: Optional[str] = None,
         ksuffix: Optional[str] = None
     ) -> None:
@@ -183,7 +201,12 @@ class HTMLDisplay(object):
                 supplemented.
             silence_stdout (bool): If `True`, the content won't be printed but
                 only registered in the database.
-            preformatted (bool): If `True`, wrap the content in HTML pre-tags.
+            rendering: How to render the output.
+                'preformatted': Wrap the output in `<pre>...</pre>`.
+                'html': The output is expected to be HTML-formatted. Keep it
+                    as is.
+                'markdown': the output is expected to be Markdown-formatted.
+                    Convert it to HTML.
             dft_key: If key is None, this default key is taken, supplemented by
                 kprefix and ksuffix if available
             kprefix: prefix for the default key
@@ -195,8 +218,7 @@ class HTMLDisplay(object):
             return
         if not silence_stdout:
             print('####', key, content)
-        if preformatted:
-            content = f"<pre>{content}</pre>"
+        content = self._format_output(content, rendering)
         self.add_db_entry(key, content, suppl=suppl)
 
     @contextlib.contextmanager
@@ -205,7 +227,7 @@ class HTMLDisplay(object):
         with_libstyle: bool = True,
         figsize: Optional[Tuple[float, float]] = None,
         refresh_millisec: Optional[float] = None, tight_layout: bool = True,
-        close_all: bool = True,
+        close_all: bool = True, rendering: str = 'preformatted',
         dft_key: Optional[str] = None, kprefix: Optional[str] = None,
         ksuffix: Optional[str] = None
     ) -> None:
@@ -238,14 +260,20 @@ class HTMLDisplay(object):
             refresh_millisec (float, optional): If a number is given, the HTML
                 page will start Javascript timer to refresh the image
                 periodically.
-            tight_layout (bool): If `True`, call `plt.tight_layout()` in the end.
+            tight_layout (bool): If `True`, call `plt.tight_layout()` in the
+                end.
             close_all (bool): If `True`, call `plt.close('all')` in the end.
 
             suppl (bool): If `True`, the database entry isn't replaced but
                 supplemented.
             silence_stdout (bool): If `True`, the content won't be printed but
                 only registered in the database.
-            preformatted (bool): If `True`, wrap the content in HTML pre-tags.
+            rendering: How to render the output.
+                'preformatted': Wrap the output in `<pre>...</pre>`.
+                'html': The output is expected to be HTML-formatted. Keep it
+                    as is.
+                'markdown': the output is expected to be Markdown-formatted.
+                    Convert it to HTML.
             dft_key: If key is None, this default key is taken, supplemented by
                 kprefix and ksuffix if available
             kprefix: prefix for the default key
@@ -332,8 +360,9 @@ class HTMLDisplay(object):
               {refresh_millisec});
             </script>
             """
-        contents = (f'<img src="{path}"><pre>{description}</pre>'
-                    f'{refresh_code}')
+
+        description = self._format_output(description, rendering)
+        contents = (f'<img src="{path}"> {description}{refresh_code}')
 
         self.add_db_entry(key, contents)
         if close_all:

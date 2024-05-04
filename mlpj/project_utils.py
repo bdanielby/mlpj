@@ -154,6 +154,11 @@ class Manager(object):
         self._add_dft_key(kwargs)
         return self.display.html(*args, **kwargs)
 
+    def markdown(self, *args, **kwargs) -> None:
+        """delegates to `result_display.HTMLDisplay.markdown`"""
+        self._add_dft_key(kwargs)
+        return self.display.markdown(*args, **kwargs)
+
     def print(self, *args, **kwargs) -> None:
         """delegates to `result_display.HTMLDisplay.print`"""
         self._add_dft_key(kwargs)
