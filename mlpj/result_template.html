@@ -7,6 +7,11 @@
   <style type="text/css">
 <!--
 h3 { margin: 0; }
+body {
+  background-color: #1c1c1c;
+  color: white;
+}
+
 .result_item { margin: 0;
   color: black !important;
   background-color: SeaGreen; border: 1px solid;
@@ -31,7 +36,7 @@ function start_image_refresh_timer(how_long, end_time,
                                    key, path, refresh_millisec) {
     how_long *= 1000;
     end_time *= 1000;
-    
+
     var now = new Date().getTime();
     if (now >= end_time) {
       return;
@@ -83,7 +88,7 @@ function update_images() {
       var scroll_top = $(window).scrollTop();
       var visible_height = document.body.clientHeight;
       var tolerance = 100;
-      
+
       if (img_pos >= scroll_top - tolerance
           && img_pos <= scroll_top + visible_height + tolerance) {
         t.attr('src', t.attr('data-src')); // trigger the image load
