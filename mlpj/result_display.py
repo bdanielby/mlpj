@@ -160,6 +160,11 @@ class HTMLDisplay(object):
             self.print(key, content, suppl=suppl, silence_stdout=silence_stdout,
                     preformatted=preformatted)
 
+    def html(self, *args, **kwargs) -> None:
+        """Same as `printer` but with preformatted=False"""
+        kwargs['preformatted'] = False
+        return self.printer(*args, **kwargs)
+
     def print(
         self, key: str, content: str, suppl: bool = False,
         silence_stdout: bool = False, preformatted: bool = False,

@@ -149,6 +149,11 @@ class Manager(object):
         self._add_dft_key(kwargs)
         return self.display.printer(*args, **kwargs)
 
+    def html(self, *args, **kwargs) -> None:
+        """delegates to `result_display.HTMLDisplay.html`"""
+        self._add_dft_key(kwargs)
+        return self.display.html(*args, **kwargs)
+
     def print(self, *args, **kwargs) -> None:
         """delegates to `result_display.HTMLDisplay.print`"""
         self._add_dft_key(kwargs)
