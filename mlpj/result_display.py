@@ -68,19 +68,22 @@ class HTMLDisplay(object):
             (in `matplotlib` and other libraries)
         further_html_headers (str, optional): further headers to add to the
             generated HTML pages
-        refresh_how_long (float): upper limit for the number of seconds to run the
-            refresh loop (only used if plots request refreshing)
+        refresh_how_long (float): upper limit for the number of seconds to run
+            the refresh loop (only used if plots request refreshing)
         refresh_not_started_after (float): upper limit for the number of seconds
             after creating the plot to ignore requests for refreshing
     """
-    def __init__(self, db_path: str, project_name: str, html_dir: str, image_dir: str,
-        default_figsize: Tuple[float, float] = (8, 6), further_html_headers: str = '',
+    def __init__(
+        self, db_path: str, project_name: str, html_dir: str, image_dir: str,
+        default_figsize: Tuple[float, float] = (8, 6),
+        further_html_headers: str = '',
         refresh_how_long: float = pu.SECONDS_IN_HOUR // 2,
         refresh_not_started_after: float = pu.SECONDS_IN_DAY // 2,
     ):
         self.db_path = os.path.abspath(db_path)
 
-        with open(os.path.join(os.path.dirname(__file__), "result_template.html")
+        with open(
+            os.path.join(os.path.dirname(__file__), "result_template.html")
         ) as fin:
             self.html_template = jinja2.Template(fin.read())
 
@@ -154,15 +157,16 @@ class HTMLDisplay(object):
         key = self._construct_key(key, dft_key, kprefix, ksuffix)
 
         out = io.StringIO()
-        branched = out
         text = None
         try:
-            with pu.redirect_stdouterr(branched, branched):
+            with pu.redirect_stdouterr_branched(
+                out, condition=not silence_stdout
+            ):
                 with pdu.wide_display():
                     yield key
         finally:
             content = out.getvalue().rstrip()
-            self.print(key, content, suppl=suppl, silence_stdout=silence_stdout,
+            self.print(key, content, suppl=suppl, silence_stdout=True,
                        rendering=rendering)
 
     def html(self, *args, **kwargs) -> None:
@@ -245,7 +249,8 @@ class HTMLDisplay(object):
             key (str): result key
             tool ('matplotlib' | 'system'):
                 For `matplotlib`, `plt.figure(1, figsize=figsize)` is called
-                initially and after executing the block converted to the PNG file.
+                initially and after executing the block converted to the PNG
+                file.
 
                 For `system`, the PNG filepath is available as a with-variable
                 for saving the plot under this path.
@@ -304,8 +309,8 @@ class HTMLDisplay(object):
         try:
             if with_printer:
                 out = io.StringIO()
-                branched = pu.BranchedOutputStreams((out, sys.stdout))
-                with pu.redirect_stdouterr(branched, branched):
+                with pu.redirect_stdouterr_branched(
+                        out, condition=not silence_stdout):
                     with pdu.wide_display():
                         try:
                             if tool == 'matplotlib':
@@ -480,7 +485,9 @@ class HTMLDisplay(object):
                     primary key (key, ind)
                 )""")
 
-    def _regenerate_html(self, cursor: sqlite3.Cursor, descending: bool = True) -> None:
+    def _regenerate_html(
+        self, cursor: sqlite3.Cursor, descending: bool = True
+    ) -> None:
         """Regenerate the result HTML page.
 
         Args:
@@ -496,7 +503,8 @@ class HTMLDisplay(object):
             desc_part = ''
 
         for key, contents, _ in cursor.execute(f"""
-            select key, group_concat(contents, "\n"), max(timestamp) as maxts from (
+            select key, group_concat(contents, "\n"),
+            max(timestamp) as maxts from (
             select key, contents, timestamp from findings
             order by timestamp desc, ind)
             group by key order by maxts {desc_part}"""

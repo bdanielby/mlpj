@@ -190,6 +190,23 @@ class BranchedOutputStreams:
             stream.close()
 
 
+def redirect_stdouterr_branched(
+    outfp: TextIO, errfp: Optional[TextIO] = None,
+    condition: bool = True
+):
+    """Same as redirect_stdouterr but with outfp and errfp each being
+    BranchedOutputStreams including the original streams if condition=True
+    """
+    if errfp is None:
+        errfp = outfp
+
+    if condition:
+        outfp = BranchedOutputStreams((sys.stdout, outfp))
+        errfp = BranchedOutputStreams((sys.stderr, errfp))
+
+    return redirect_stdouterr(outfp, errfp)
+
+
 @contextlib.contextmanager
 def open_overwriting_safely(
         filepath: str, mode: int
