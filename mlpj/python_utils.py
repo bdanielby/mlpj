@@ -356,4 +356,4 @@ def strip_margin(text: str) -> str:
     Returns:
         output string
     """
-    return re.sub('\n[ \t]*[|]', '\n', text)
+    return re.sub('^[ \t]*[|]', '', text, flags=re.M)
