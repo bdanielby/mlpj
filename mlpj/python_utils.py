@@ -357,3 +357,26 @@ def strip_margin(text: str) -> str:
         output string
     """
     return re.sub('^[ \t]*[|]', '', text, flags=re.M)
+
+
+def move_and_link(filepath: str, directory: str) -> None:
+    """Move a filepath and link it from the original position (via a symbolic
+    link)
+
+    Create the target directory if necessary. For the original, follow symlinks
+    and check whether it is already in the target directory.
+
+    Args:
+        filepath: the filepath to move and link
+        directory: the target directory
+    """
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+    target_filepath = os.path.join(directory, os.path.basename(filepath))
+
+    orig_filepath = os.path.realpath(os.path.abspath(filepath))
+    if orig_filepath == os.path.realpath(os.path.abspath(target_filepath)):
+        return
+
+    os.rename(orig_filepath, target_filepath)
+    os.symlink(target_filepath, orig_filepath)
