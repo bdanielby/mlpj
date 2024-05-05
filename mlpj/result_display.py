@@ -9,7 +9,7 @@ import time
 import io
 import sqlite3
 import datetime
-from typing import Tuple, Optional, List, Union, Any
+from typing import Tuple, Optional, List, Union, Any, Callable
 
 import contextlib
 import jinja2
@@ -24,6 +24,23 @@ import lockfile
 from . import pandas_utils as pdu
 from . import python_utils as pu
 from . import plot_utils as pltu
+
+
+def page_name_and_key_within_page(key: str) -> Tuple[str, str]:
+    """Split the result key into the page name and the key within the page
+
+    Args:
+        key: result key
+    Returns:
+       * page name (without '.html' suffix)
+       * key within the page
+    """
+    key_parts = key.split(':', maxsplit=1)
+    if len(key_parts) == 1:
+        return 'index', key
+    else:
+        page_name, proper_key = key_parts
+        return page_name, proper_key
 
 
 class HTMLDisplay(object):
@@ -108,7 +125,6 @@ class HTMLDisplay(object):
         self.image_dir = image_dir
         pu.makedir_unless_exists(self.image_dir)
 
-        self.html_index_filename = 'index.html'
         self.default_figsize = default_figsize
         self.further_html_headers = further_html_headers
         self.refresh_how_long = refresh_how_long
@@ -129,7 +145,7 @@ class HTMLDisplay(object):
                 key = kpfx + key
             if ksfx is not None:
                 key = key + ksfx
-        if page_name is not None and ':' not in key:
+        if page_name is not None and page_name != '' and ':' not in key:
             key = f'{page_name}:{key}'
         return key
 
@@ -425,6 +441,12 @@ class HTMLDisplay(object):
             db.commit()
             self._regenerate_html(cursor)
 
+    def regenerate_html(self) -> None:
+        """Regenerate the result pages"""
+        with lockfile.LockFile(self.db_path), \
+                pu.sqlite3_conn(self.db_path) as (_, cursor):
+            self._regenerate_html(cursor)
+
     def link_text(self, filepath: str, link_text: str= '') -> str:
         """HTML text for a link to a given filepath.
 
@@ -470,9 +492,9 @@ class HTMLDisplay(object):
 
     def del_keys_like(self, regex: str) -> None:
         """Delete result keys matching the passed regex from the database.
-
         Args:
-            regex (str): regular expression for the result keys
+            regex (str): regular expression for the result keys; it is used with
+                re.search
         """
         if pu.isstring(regex):
             regex = re.compile(regex)
@@ -481,6 +503,72 @@ class HTMLDisplay(object):
             if regex.search(key):
                 selected_keys.append(key)
         self.del_keys(selected_keys)
+
+    def rename_keys(self, renamer: Callable[[str], str]) -> None:
+        """Rename result keys with the given function
+
+        Nothing is done for keys where the renamer function returns the key
+        unchanged.
+
+        Args:
+            renamer: function to map the keys
+        """
+        with pu.sqlite3_conn(self.db_path) as (db, cursor):
+            for key, in list(cursor.execute('select key from findings')):
+                new_key = renamer(key)
+                if new_key != key:
+                    print(f"renaming key {key} to {new_key}")
+                    cursor.execute(
+                        'update findings set key = ? where key = ?',
+                        (new_key, key))
+            db.commit()
+
+    def move_keys_to_page(self, regex: str, page_name: str) -> None:
+        """Move keys matching the regex to another HTML page
+
+        Args:
+            regex: regular expression to select the keys to move
+            page_name: new page name for the selected keys
+        """
+        if pu.isstring(regex):
+            regex = re.compile(regex)
+
+        def renamer(key: str) -> str:
+            """Rename old keys to new keys"""
+            if regex.search(key) is None:
+                return key
+            else:
+                _, proper_key = page_name_and_key_within_page(key)
+                if page_name == '' or page_name == 'index':
+                    return proper_key
+                else:
+                    return f'{page_name}:{proper_key}'
+
+        self.rename_keys(renamer)
+
+    def move_keys_from_page_to_page(
+        self, old_page_name: str, new_page_name: str
+    ) -> None:
+        """Move keys from one page to another
+
+        Args:
+            old_page_name: old page whose keys should be moved; can be an empty
+                string for the 'index' page
+            new_page_name: new page name for those keys
+        """
+        if old_page_name == '':
+            old_page_name = 'index'
+
+        def renamer(key: str) -> str:
+            """Rename old keys to new keys"""
+            page_name, proper_key = page_name_and_key_within_page(key)
+            if page_name == old_page_name:
+                if new_page_name == '' or new_page_name == 'index':
+                    return proper_key
+                else:
+                    return f'{new_page_name}:{proper_key}'
+
+        self.rename_keys(renamer)
 
     def get_findings(self) -> List[Any]:
         """Get the contents of the findings table in the database,
@@ -507,6 +595,18 @@ class HTMLDisplay(object):
                     primary key (key, ind)
                 )""")
 
+    def page_name_to_html_filepath(self, page_name: str) -> str:
+        """Translate a page name to an HTML filepath
+
+        Args:
+            page_name: page name of a result key
+        Returns:
+            filepath of the corresponding HTML file
+        """
+        if page_name == '':
+            page_name = 'index'
+        return os.path.join(self.html_dir, f'{page_name}.html')
+
     def _regenerate_html(
         self, cursor: sqlite3.Cursor, descending: bool = True
     ) -> None:
@@ -516,7 +616,8 @@ class HTMLDisplay(object):
             cursor: Sqlite3 database cursor
             descending (bool): whether to sort in descending timestamp order
         """
-        all_entries = {}
+        all_entries = {self.page_name_to_html_filepath('index'): []}
+
         # The subquery is necessary for the reverse ordering by timestamp within
         # the groups defined by the keys.
         if descending:
@@ -536,15 +637,9 @@ class HTMLDisplay(object):
 
             timestr = datetime.datetime.fromtimestamp(timestamp).strftime('%c')
 
-            key_parts = key.split(':', maxsplit=1)
-            if len(key_parts) == 1:
-                proper_key = key
-                html_filename = self.html_index_filename
-            else:
-                html_filename, proper_key = key_parts
-                html_filename += '.html'
+            page_name, proper_key = page_name_and_key_within_page(key)
+            html_filepath = self.page_name_to_html_filepath(page_name)
 
-            html_filepath = os.path.join(self.html_dir, html_filename)
             existing_entries = all_entries.get(html_filepath, [])
 
             existing_entries.append((proper_key, contents, timestr))

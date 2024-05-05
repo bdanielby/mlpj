@@ -231,10 +231,29 @@ class Manager(object):
         """delegates to `result_display.HTMLDisplay.del_keys_like`"""
         return self.display.del_keys_like(regex)
 
+    def rename_keys(self, renamer: Callable[[str], str]) -> None:
+        """delegates to `result_display.HTMLDisplay.rename_keys`"""
+        return self.display.rename_keys(renamer)
+
+    def move_keys_to_page(self, regex: str, page_name: str) -> None:
+        """delegates to `result_display.HTMLDisplay.move_keys_to_page`"""
+        return self.display.move_keys_to_page(regex, page_name)
+
+    def move_keys_from_page_to_page(
+        self, old_page_name: str, new_page_name: str
+    ) -> None:
+        """delegates to `result_display.HTMLDisplay.move_keys_from_page_to_page`
+        """
+        return self.display.move_keys_from_page_to_page(
+            old_page_name, new_page_name)
+
     def get_findings(self) -> List[Any]:
         """delegates to `result_display.HTMLDisplay.db_findings"""
         return self.display.get_findings()
 
+    def regenerate_html(self) -> None:
+        """delegates to `result_display.HTMLDisplay.regenerate_html"""
+        return self.display.regenerate_html()
 
     def call_and_printer(self, fct: Callable, *args, **kwargs) -> Any:
         """Call a function and print its output using `printer`
@@ -260,7 +279,8 @@ class Manager(object):
             if kwargs.get('_print_call', False):
                 args_s = ', '.join(
                     [str(arg) for arg in args]
-                    + [f'{param}={value}' for param, value in kwargs_for_fct])
+                    + [f'{param}={value}'
+                       for param, value in kwargs_for_fct.items()])
                 print(f"calling: {fct.__name__}({args_s})")
                 print()
 
