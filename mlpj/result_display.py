@@ -73,6 +73,12 @@ class HTMLDisplay(object):
             the refresh loop (only used if plots request refreshing)
         refresh_not_started_after (float): upper limit for the number of seconds
             after creating the plot to ignore requests for refreshing
+
+    For choosing the page name of the result, you have three options in this
+    order of precedence:
+    1. Use a key of the format '<page_name>:<key within the page>'.
+    2. Use the param `page_name` in the output methods.
+    3. Add a string attribute `page_name` for the action.
     """
     def __init__(
         self, db_path: str, project_name: str, html_dir: str, image_dir: str,
@@ -110,7 +116,8 @@ class HTMLDisplay(object):
 
     def _construct_key(
         self, key: Optional[str], dft_key: Optional[str] = None,
-        kpfx: Optional[str] = None, ksfx: Optional[str] = None
+        kpfx: Optional[str] = None, ksfx: Optional[str] = None,
+        page_name: Optional[str] = None
     ) -> str:
         """Construct the key for an entry in the result display from the
         argumetns key, kpfx and ksfx
@@ -122,6 +129,8 @@ class HTMLDisplay(object):
                 key = kpfx + key
             if ksfx is not None:
                 key = key + ksfx
+        if page_name is not None and ':' not in key:
+            key = f'{page_name}:{key}'
         return key
 
     @contextlib.contextmanager
@@ -129,7 +138,7 @@ class HTMLDisplay(object):
         self, key: Optional[str] = None, suppl: bool = False,
         silence_stdout: bool = False, rendering: str = 'preformatted',
         dft_key: Optional[str] = None, kpfx: Optional[str] = None,
-        ksfx: Optional[str] = None
+        ksfx: Optional[str] = None, page_name: Optional[str] = None
     ) -> None:
         """Context manager to add the output printed in the context manager's
         block to the database under the given key and regenerate the
@@ -154,8 +163,12 @@ class HTMLDisplay(object):
                 kpfx and ksfx if available
             kpfx: prefix for the default key
             ksfx: suffix for the default key
+            page_name: The name HTML page (without the suffix '.html') to put
+                the results in. Alternatively, the page name can be specified
+                within the key like this '<page name>:<key within the page>',
+                which also takes precedence ofer page_name.
         """
-        key = self._construct_key(key, dft_key, kpfx, ksfx)
+        key = self._construct_key(key, dft_key, kpfx, ksfx, page_name)
 
         out = io.StringIO()
         text = None
@@ -192,7 +205,7 @@ class HTMLDisplay(object):
         self, key: str, content: str, suppl: bool = False,
         silence_stdout: bool = False, rendering: str = 'preformatted',
         dft_key: Optional[str] = None, kpfx: Optional[str] = None,
-        ksfx: Optional[str] = None
+        ksfx: Optional[str] = None, page_name: Optional[str] = None
     ) -> None:
         """Print and add the output to the database under the given key and
         regenerate the corresponding HTML page.
@@ -216,8 +229,12 @@ class HTMLDisplay(object):
                 kpfx and ksfx if available
             kpfx: prefix for the default key
             ksfx: suffix for the default key
+            page_name: The name HTML page (without the suffix '.html') to put
+                the results in. Alternatively, the page name can be specified
+                within the key like this '<page name>:<key within the page>',
+                which also takes precedence ofer page_name.
         """
-        key = self._construct_key(key, dft_key, kpfx, ksfx)
+        key = self._construct_key(key, dft_key, kpfx, ksfx, page_name)
 
         if not content.strip():
             return
@@ -234,7 +251,7 @@ class HTMLDisplay(object):
         refresh_millisec: Optional[float] = None, tight_layout: bool = True,
         close_all: bool = True, rendering: str = 'preformatted',
         dft_key: Optional[str] = None, kpfx: Optional[str] = None,
-        ksfx: Optional[str] = None
+        ksfx: Optional[str] = None, page_name: Optional[str] = None
     ) -> None:
         """Context manager to convert the plot created in the context manager's
         block into a PNG file
@@ -284,8 +301,12 @@ class HTMLDisplay(object):
                 kpfx and ksfx if available
             kpfx: prefix for the default key
             ksfx: suffix for the default key
+            page_name: The name HTML page (without the suffix '.html') to put
+                the results in. Alternatively, the page name can be specified
+                within the key like this '<page name>:<key within the page>',
+                which also takes precedence ofer page_name.
         """
-        key = self._construct_key(key, dft_key, kpfx, ksfx)
+        key = self._construct_key(key, dft_key, kpfx, ksfx, page_name)
 
         key, plot_filepath = self._get_figure_path(key)
 

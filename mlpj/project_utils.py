@@ -124,6 +124,11 @@ class Manager(object):
         """delegates to `actions_looper.ActionsLooper.curr_astep`"""
         return self.actions_looper.curr_astep
 
+    @property
+    def curr_page_name(self) -> Optional[str]:
+        """delegates to `actions_looper.ActionsLooper.curr_page_name`"""
+        return self.actions_looper.curr_page_name
+
     def execute(self, *args, **kwargs) -> None:
         """delegates to `actions_looper.ActionsLooper.execute`"""
         return self.actions_looper.execute(*args, **kwargs)
@@ -137,37 +142,43 @@ class Manager(object):
         return self.actions_looper.read_result(action, step)
 
 
-    def _add_dft_key(self, kwargs: Dict[str, Any]) -> None:
-        """Add the key `dft_key` to the keyword arguments
+    def _add_dft_values(self, kwargs: Dict[str, Any]) -> None:
+        """Add defaults for the arguments `dft_key` and `page_name to the
+        keyword arguments if they aren't already present.
 
-        Its value is `self.curr_astep`.
+        `dft_key` defaults to `self.curr_astep`.
+        `page_name` defaults to `self.page_name`.
         """
         if 'dft_key' not in kwargs:
             kwargs['dft_key'] = self.curr_astep
+        if 'page_name' not in kwargs:
+            page_name = self.curr_page_name
+            if page_name is not None:
+                kwargs['page_name'] = self.curr_page_name
 
     def printer(self, *args, **kwargs) -> None:
         """delegates to `result_display.HTMLDisplay.printer`"""
-        self._add_dft_key(kwargs)
+        self._add_dft_values(kwargs)
         return self.display.printer(*args, **kwargs)
 
     def html(self, *args, **kwargs) -> None:
         """delegates to `result_display.HTMLDisplay.html`"""
-        self._add_dft_key(kwargs)
+        self._add_dft_values(kwargs)
         return self.display.html(*args, **kwargs)
 
     def markdown(self, *args, **kwargs) -> None:
         """delegates to `result_display.HTMLDisplay.markdown`"""
-        self._add_dft_key(kwargs)
+        self._add_dft_values(kwargs)
         return self.display.markdown(*args, **kwargs)
 
     def print(self, *args, **kwargs) -> None:
         """delegates to `result_display.HTMLDisplay.print`"""
-        self._add_dft_key(kwargs)
+        self._add_dft_values(kwargs)
         return self.display.print(*args, **kwargs)
 
     def savefig(self, *args, **kwargs) -> None:
         """delegates to `result_display.HTMLDisplay.savefig`"""
-        self._add_dft_key(kwargs)
+        self._add_dft_values(kwargs)
         return self.display.savefig(*args, **kwargs)
 
     def add_db_entry(self, *args, **kwargs) -> None:

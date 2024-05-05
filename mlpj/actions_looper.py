@@ -110,7 +110,7 @@ class PicklingStepsStorage(object):
             return self.read(result.action, result.step)
         else:
             return result
-        
+
     def read(self, action: str, step: int) -> Any:
         """Reads the result of the given step of the given action in your
         program
@@ -146,18 +146,18 @@ class PicklingStepsStorage(object):
         with open(filepath, 'wb') as fout:
             pickle.dump(result, fout, protocol=2)
         return self.delegate_ifn(result)
-    
-    
+
+
 class ActionsLooper(object):
     """Manages the execution of selected steps of your program based on
     pickled results of earlier steps
-    
+
     The actions loop is reentrant, i.e. you can call `execute` while it already
     executes an actions loop.
 
     Instead of an object of this class, a project manager from module
     `project_utils` can be used because it delegates to this class internally.
-    
+
     Args:
         steps_storage (PicklingStepsStorage): object to handle the storage of
             step results
@@ -170,7 +170,7 @@ class ActionsLooper(object):
         with_termseq: bool = True
     ):
         self.steps_storage = steps_storage
-        
+
         self._available_actions = {}
         self.add_available(TestAction, 'test')
         self.doc = doc
@@ -183,7 +183,7 @@ class ActionsLooper(object):
         self._curr_step_method_stack = []
         self._curr_step_specs_stack = []
         self.actions_level = 0
-        
+
     def as_action(self, name: Optional[str] = None) -> Any:
         """Decorator to add the decorated class or function as an available action.
 
@@ -265,7 +265,7 @@ class ActionsLooper(object):
             elif pattern_for_funcs is not None and callable(obj):
                 if re.search(pattern_for_funcs, name) is not None:
                     anything_added |= self.add_available(obj, obj.__name__)
-                
+
         if not tolerate_empty and not anything_added:
             raise ValueError(
                 f"no suitable classes found in module {module.__name__}")
@@ -306,12 +306,12 @@ class ActionsLooper(object):
         """
         if args is None:
             args = sys.argv[1:]
-            
+
         if add_main:
             self.add_available_from_main_module(
                 tolerate_empty=tolerate_empty,
                 pattern_for_funcs=pattern_for_funcs)
-            
+
         parser = self.action_parser()
         self._parse_sys_args()
         self.execute(self.args.actions)
@@ -324,7 +324,20 @@ class ActionsLooper(object):
             str: action name
         """
         return self._curr_action_stack[-1]
-        
+
+    @property
+    def curr_page_name(self) -> Optional[str]:
+        """The current page name to put results in
+
+        This is an optional attribute `page_name` of the action.
+
+        Returns:
+            page name
+        """
+        curr_action_name = self.curr_action
+        action, _ = self._available_actions[curr_action_name]
+        return getattr(action, 'page_name', None)
+
     @property
     def curr_step(self) -> int:
         """The currently executed step.
@@ -373,15 +386,15 @@ class ActionsLooper(object):
                 self._execute1(obj, step_methods, req_steps)
             finally:
                 self._curr_action_stack.pop()
-                
+
     def execute_fct_steps(self, locs: Dict[str, Any]) -> None:
         """Callback to be used from within function actions. It executes the
         requested steps among the steps found in the passed `locals()` dict.
-        
+
         A function can also be an actions. Declare its steps as inner functions
         and call `execute_fct_steps(locals())` in the last line of the function
         body.
-        
+
         Args:
             locs: local variables dict produced by `locals()` from within the
                 function body
@@ -403,7 +416,7 @@ class ActionsLooper(object):
             object: the ultimate result of the given step of the given action
         """
         return self.steps_storage.read(action, step)
-        
+
     def action_parser(self) -> argparse.ArgumentParser:
         """Generates the command line argument parser for the "-a", "--actions"
         arguments.
@@ -478,7 +491,7 @@ class ActionsLooper(object):
             self, obj_cls_or_locs: Any
     ) -> collections.OrderedDict:
         """The step methods for the argument.
-        
+
         Args:
             obj_cls_or_locs: object or class or locals dict representing an action
         Returns:
@@ -492,7 +505,7 @@ class ActionsLooper(object):
             names = list(obj_cls_or_locs.keys())
         else:
             names = dir(obj_cls_or_locs)
-            
+
         for name in names:
             attr = self._entry_of_obj_cls_or_locs(obj_cls_or_locs, name)
             if not callable(attr):
@@ -502,16 +515,16 @@ class ActionsLooper(object):
             if mo is not None:
                 step_no = int(mo.group(1))
                 step_methods[step_no] = name
-                
+
         # Sort the steps numerically.
         step_nos = list(step_methods.keys())
         step_nos.sort()
         step_methods = collections.OrderedDict([
             (step_no, step_methods[step_no]) for step_no in step_nos])
         return step_methods
-    
+
     RE_STEP_NOT_ACTION = r'^(\d+)?(\.\.|:)?(\d+)?$'
-    
+
     def _translate_requested_actions(
             self, requested_action_specs: Union[str, List[str]]
     ) -> List[Tuple[str, List[Any]]]:
@@ -529,7 +542,7 @@ class ActionsLooper(object):
         to_execute = []
         cur_action = None
         cur_step_specs = [[]]
-            
+
         def add_requested_steps():
             if cur_action is not None:
                 step_methods = self._available_actions[cur_action][1]
@@ -537,14 +550,14 @@ class ActionsLooper(object):
                     (cur_action, self._translate_requested_steps(
                         cur_action, step_methods, cur_step_specs[0])))
                 cur_step_specs[0] = []
-    
+
         if pu.isstring(requested_action_specs):
             requested_action_specs = requested_action_specs.split()
         elif not isinstance(requested_action_specs, (tuple, list)):
             cur_action = requested_action_specs.__name__
             add_requested_steps()
             return to_execute
-        
+
         for req_action in requested_action_specs:
             match = re.match(self.RE_STEP_NOT_ACTION, req_action)
             if match is None:
@@ -553,7 +566,7 @@ class ActionsLooper(object):
                 if match is None:
                     raise ValueError(
                         f'invalid action specification "{req_action}"')
-                
+
                 add_requested_steps()
                 if req_action.startswith('%'):
                     pattern = req_action[1:]
@@ -579,10 +592,10 @@ class ActionsLooper(object):
                         "translate_requested_actions: A step specification "
                         "must be preceded by a an action.")
                 cur_step_specs[0].append(req_action)
-                
+
         add_requested_steps()
         return to_execute
-            
+
     def _translate_requested_steps(
             self, cur_action: str, step_methods: Dict[int, str],
             requested_step_specs: List[Any]
@@ -645,7 +658,7 @@ class ActionsLooper(object):
         """Does the given step method produce a result?
 
         That is, does its name start with "step_r"?
-        
+
         Returns:
             bool: True for step methods producing results
         """
@@ -669,7 +682,7 @@ class ActionsLooper(object):
         if argspec.defaults is not None:
             n_positional -= len(argspec.defaults)
         return n_positional > 0 or argspec.varargs is not None
-    
+
     def _steps_to_read(
             self, obj: Any, step_methods: Dict[int, str], req_steps: List[int]
     ) -> List[int]:
@@ -678,7 +691,7 @@ class ActionsLooper(object):
 
         No need to read any data if the requested methods have no input params
         to read from earlier steps.
-        
+
         Args:
             obj: object, class or `locals()` dict representing an action
             step_methods (dict): mapping step number to method name
@@ -691,7 +704,7 @@ class ActionsLooper(object):
             if self._method_has_params_to_read(obj, step_methods[step], step)]
         if not req_steps_with_inputs:
             return []
-        
+
         max_req_step = max(req_steps_with_inputs)
         req_steps = set(req_steps)
         return [
@@ -717,7 +730,7 @@ class ActionsLooper(object):
         mthd = self._entry_of_obj_cls_or_locs(obj, method_name)
         if not self._method_has_params_to_read(obj, method_name, cur_step):
             return mthd()
-        
+
         args = []
         for step, result in data.items():
             if step < cur_step:
@@ -728,7 +741,7 @@ class ActionsLooper(object):
             else:
                 break
         return mthd(*args)
-    
+
     def _execute1(
             self, obj: Any, step_methods: Dict[int, str], req_steps: List[int]
     ) -> None:
@@ -792,7 +805,7 @@ class ActionsLooper(object):
             finally:
                 self._curr_step_method_stack.pop()
                 self._curr_step_stack.pop()
-    
+
     def _parse_sys_args(self, args: Optional[List[str]] = None) -> None:
         """Call `action_parser`, lets it act on `args` and saves the result in
         `self.args`.
@@ -818,7 +831,7 @@ class TestAction(object):
 class ActionResultProxy:
     """Special result serving as a proxy for another result saved for a given step
     of a given action.
-    
+
     Use this to avoid saving the same big result multiple time.
 
     Args:
