@@ -3,6 +3,7 @@ Utilities and convenience functions for using the Python standard library.
 """
 import re
 import os
+import shutil
 import sys
 import sqlite3
 import datetime
@@ -359,7 +360,7 @@ def strip_margin(text: str) -> str:
     return re.sub('^[ \t]*[|]', '', text, flags=re.M)
 
 
-def move_and_link(filepath: str, directory: str) -> None:
+def move_and_link(filepath: str, target_dir: str) -> None:
     """Move a filepath and link it from the original position (via a symbolic
     link)
 
@@ -368,15 +369,15 @@ def move_and_link(filepath: str, directory: str) -> None:
 
     Args:
         filepath: the filepath to move and link
-        directory: the target directory
+        target_dir: the target directory
     """
-    if not os.path.isdir(directory):
-        os.makedirs(directory)
-    target_filepath = os.path.join(directory, os.path.basename(filepath))
+    makedir_unless_exists(target_dir)
+
+    target_filepath = os.path.join(target_dir, os.path.basename(filepath))
 
     orig_filepath = os.path.realpath(os.path.abspath(filepath))
     if orig_filepath == os.path.realpath(os.path.abspath(target_filepath)):
         return
 
-    os.rename(orig_filepath, target_filepath)
+    shutil.move(orig_filepath, target_filepath)
     os.symlink(target_filepath, orig_filepath)

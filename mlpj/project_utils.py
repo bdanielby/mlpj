@@ -8,13 +8,18 @@ import random
 import contextlib
 import tempfile
 import collections
-from typing import Optional, Any, List, Union, Dict, Callable
+import pickle
+import json
+from typing import Optional, Any, List, Union, Dict, Callable, Sequence, Mapping
 from collections.abc import Generator
 
 import numpy as np
 
 from . import python_utils as pu
 from . import result_display, actions_looper
+
+
+FINDINGS_FILENAME = 'contents.db'
 
 
 class Manager(object):
@@ -26,8 +31,8 @@ class Manager(object):
             taken as the project name
         seed (int, optional): random seed, will be registered in the libraries
             `numpy` and `random`
-        doc (str, optional): project documentation to be displayed in the command
-            line help
+        doc (str, optional): project documentation to be displayed in the
+            command line help
 
     Directory and file structure for the project:
     * `<project_path>/steps`: the persisted interim results of processing
@@ -46,21 +51,27 @@ class Manager(object):
     name: str
     db_path: str
     html_path: str
-    htmlind_path: str
     image_path: str
+    insight_path: str
+    value_path: str
     seed: Optional[int]
     display: result_display.HTMLDisplay
     actions_looper: actions_looper.ActionsLooper
 
-    def __init__(self, project_path: str, seed: Optional[int] = None, doc: Optional[str] = None):
+    def __init__(
+        self, project_path: str, seed: Optional[int] = None,
+        doc: Optional[str] = None
+    ) -> None:
         self.project_dir = os.path.abspath(os.path.expanduser(project_path))
         pu.makedir_unless_exists(self.project_dir)
         self.name = os.path.basename(self.project_dir)
 
-        self.db_path = os.path.join(self.project_dir, "contents.db")
-        self.html_path = os.path.join(self.project_dir, "html")
-        self.htmlind_path = os.path.join(self.html_path, "index.html")
-        self.image_path = os.path.join(self.project_dir, "image")
+        self.db_path = os.path.join(self.project_dir, FINDINGS_FILENAME)
+
+        for dirname in 'html image insight value'.split():
+            path = os.path.join(self.project_dir, dirname)
+            pu.makedir_unless_exists(path)
+            setattr(self, f'{dirname}_path', path)
 
         self.seed = seed
         if seed is not None:
@@ -77,7 +88,8 @@ class Manager(object):
         steps_storage = actions_looper.PicklingStepsStorage(
             os.path.join(self.project_dir, "steps"))
 
-        self.actions_looper = actions_looper.ActionsLooper(steps_storage, doc=doc)
+        self.actions_looper = actions_looper.ActionsLooper(
+            steps_storage, doc=doc)
 
     def as_action(self, *args, **kwargs) -> Any:
         """delegates to `actions_looper.ActionsLooper.action`"""
@@ -296,6 +308,144 @@ class Manager(object):
         """Same as `call_and_printer` but with `rendering='markdown'`"""
         kwargs['_rendering'] = 'markdown'
         return self.call_and_printer(fct, *args, **kwargs)
+
+    def move_parts_and_link(
+        self, target_dir: str,
+        parts: Sequence[str] = (FINDINGS_FILENAME, 'insight')
+    ) -> None:
+        """For the selected paths within the project directory, call
+        `pu.move_and_link`
+
+        This is useful, for example, if you want to keep these parts in a
+        repository and the project directory isn't part of it.
+
+        Args:
+            target_dir: the target directory for `pu.move_and_link`
+            parts: the paths from the perspective of the project directory to
+                move and link
+        """
+        for part in parts:
+            pu.move_and_link(os.path.join(self.project_dir, part), target_dir)
+
+    def _serialization_filepath(
+        self, subdir: str, name: str, extension: Optional[str]
+    ) -> str:
+        """Filepath for values to be serialized"""
+        if extension is None:
+            filename = name
+        else:
+            filename = f'{name}.{extension}'
+        return os.path.join(self.project_dir, subdir, filename)
+
+    def _raise_unsupported_extension(self, extension: str) -> None:
+        """Raise an exception reporting that an unsupported extension was
+        used
+        """
+        raise ValueError(f'unsupported extension {extension}')
+
+    def write_it(
+        self, value: Any, name: str, key: Optional[str] = None,
+        subdir: str = 'value', extension: str = 'pickle'
+    ) -> None:
+        """Serialize a value into a file
+
+        Args:
+            value: the value to serialize
+            name: the serialization filename stem
+            key: If provided, the serialization contents is an ordered
+                dictionary and the value will be saved under this key in it. If
+                the serialization file already exists, the other keys are left
+                untouched.
+            subdir: the subdir for the serialization file:
+                'value': for data of temporary interest
+                'insight': for data of permanent interest (and not too large)
+                    which should be preserved in a repository
+            extension: currently supported:
+                'pickle': Python's pickle format (protocol 2)
+                'json': indented JSON format
+        """
+        filepath = self._serialization_filepath(subdir, name, extension)
+
+        data: OrderedDict
+        if key is not None:
+            if os.path.isfile(filepath):
+                if extension == 'pickle':
+                    with open(filepath, 'rb') as fin:
+                        data = pickle.load(fin)
+                elif extension == 'json':
+                    with open(filepath, 'r') as fin:
+                        data = json.load(fin)
+                else:
+                    self._raise_unsupported_extension(extension)
+                assert isinstance(data, Mapping)
+            else:
+                data = collections.OrderedDict()
+            data[key] = value
+        else:
+            data = value
+
+        if extension == 'pickle':
+            with open(filepath, 'wb') as fout:
+                pickle.dump(data, fout, protocol=2)
+        elif extension == 'json':
+            with open(filepath, 'w') as fout:
+                json.dump(data, fout, indent=2)
+                fout.write('\n')
+        else:
+            self._raise_unsupported_extension()
+
+    def write_insight(
+        self, value: Any, name: str, key: Optional[str] = None,
+        extension: str = 'pickle'
+    ) -> None:
+        """Convenience function for `write_it` with `subdir='insight'`"""
+        self.write_it(
+            value, name, key=key, subdir='insight', extension=extension)
+
+    def read_it(
+        self, name: str, key: Optional[str] = None,
+        subdir: str = 'value'
+    ) -> Any:
+        """Deserialize a value from a file
+
+        The file extension is automatically determined.
+
+        Args:
+            name: the serialization filename stem
+            key: If provided, the serialization contents is an ordered
+                dictionary and the value is saved under this key in it.
+            subdir: the subdir for the serialization file:
+                'value': for data of temporary interest
+                'insight': for data of permanent interest (and not too large)
+                    which should be preserved in a repository
+        """
+        filepath_stem = self._serialization_filepath(subdir, name, None)
+        for extension in ('pickle', 'json'):
+            filepath = f'{filepath_stem}.{extension}'
+            if os.path.exists(filepath):
+                break
+        else:
+            raise IOError(
+                'no serialization with filepath stem {filepath_stem} found')
+
+        if extension == 'pickle':
+            with open(filepath, 'rb') as fin:
+                data = pickle.load(fin)
+        elif extension == 'json':
+            with open(filepath, 'r') as fin:
+                data = json.load(fin)
+        else:
+            self._raise_unsupported_extension(extension)
+
+        if key is not None:
+            assert isinstance(data, Mapping)
+            return data[key]
+        else:
+            return data
+
+    def read_insight(self, name: str, key: Optional[str] = None) -> None:
+        """Convenience function for `read_it` with `subdir='insight'`"""
+        return self.read_it(name, key=key, subdir='insight')
 
 
 @contextlib.contextmanager
