@@ -7,6 +7,8 @@ import re
 import random
 import contextlib
 import tempfile
+import inspect
+import collections
 from typing import Optional, Any, List, Union, Dict
 from collections.abc import Generator
 
@@ -222,6 +224,42 @@ class Manager(object):
     def get_findings(self) -> List[Any]:
         """delegates to `result_display.HTMLDisplay.db_findings"""
         return self.display.get_findings()
+
+
+    def call_and_printer(self, fct, *args, **kwargs) -> Any:
+        """Call a function and print its output using `printer`
+
+        Extract all keyword arguments that match parameter names in `printer`
+        and pass them all to the latter.
+        """
+        extracted_keyword_param_names = collections.OrderedDict(
+            (name, 1) for name in
+            inspect.signature(
+                result_display.HTMLDisplay.printer).parameters.keys()
+            if name != 'self' and name in kwargs
+        )
+        kwargs_for_fct = collections.OrderedDict(
+            (key, value)
+            for key, value in kwargs.items()
+            if key not in extracted_keyword_param_names)
+        kwargs_for_printer = collections.OrderedDict(
+            (key, value)
+            for key, value in kwargs.items() if
+            key in extracted_keyword_param_names)
+
+        result = fct(*args, **kwargs_for_fct)
+        with self.printer(**kwargs_for_printer):
+            print(result)
+
+    def call_and_html(self, fct, *args, **kwargs) -> Any:
+        """Same as `call_and_printer` but with `rendering='html'`"""
+        kwargs['rendering'] = 'html'
+        return self.call_and_printer(fct, *args, **kwargs)
+
+    def call_and_markdown(self, fct, *args, **kwargs) -> Any:
+        """Same as `call_and_printer` but with `rendering='markdown'`"""
+        kwargs['rendering'] = 'markdown'
+        return self.call_and_printer(fct, *args, **kwargs)
 
 
 @contextlib.contextmanager
