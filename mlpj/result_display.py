@@ -110,26 +110,26 @@ class HTMLDisplay(object):
 
     def _construct_key(
         self, key: Optional[str], dft_key: Optional[str] = None,
-        kprefix: Optional[str] = None, ksuffix: Optional[str] = None
+        kpfx: Optional[str] = None, ksfx: Optional[str] = None
     ) -> str:
         """Construct the key for an entry in the result display from the
-        argumetns key, kprefix and ksuffix
+        argumetns key, kpfx and ksfx
         """
         if key is None:
             assert dft_key is not None
             key = dft_key
-            if kprefix is not None:
-                key = kprefix + key
-            if ksuffix is not None:
-                key = key + ksuffix
+            if kpfx is not None:
+                key = kpfx + key
+            if ksfx is not None:
+                key = key + ksfx
         return key
 
     @contextlib.contextmanager
     def printer(
         self, key: Optional[str] = None, suppl: bool = False,
         silence_stdout: bool = False, rendering: str = 'preformatted',
-        dft_key: Optional[str] = None, kprefix: Optional[str] = None,
-        ksuffix: Optional[str] = None
+        dft_key: Optional[str] = None, kpfx: Optional[str] = None,
+        ksfx: Optional[str] = None
     ) -> None:
         """Context manager to add the output printed in the context manager's
         block to the database under the given key and regenerate the
@@ -151,11 +151,11 @@ class HTMLDisplay(object):
                 'markdown': the output is expected to be Markdown-formatted.
                     Convert it to HTML.
             dft_key: If key is None, this default key is taken, supplemented by
-                kprefix and ksuffix if available
-            kprefix: prefix for the default key
-            ksuffix: suffix for the default key
+                kpfx and ksfx if available
+            kpfx: prefix for the default key
+            ksfx: suffix for the default key
         """
-        key = self._construct_key(key, dft_key, kprefix, ksuffix)
+        key = self._construct_key(key, dft_key, kpfx, ksfx)
 
         out = io.StringIO()
         text = None
@@ -191,8 +191,8 @@ class HTMLDisplay(object):
     def print(
         self, key: str, content: str, suppl: bool = False,
         silence_stdout: bool = False, rendering: str = 'preformatted',
-        dft_key: Optional[str] = None, kprefix: Optional[str] = None,
-        ksuffix: Optional[str] = None
+        dft_key: Optional[str] = None, kpfx: Optional[str] = None,
+        ksfx: Optional[str] = None
     ) -> None:
         """Print and add the output to the database under the given key and
         regenerate the corresponding HTML page.
@@ -213,11 +213,11 @@ class HTMLDisplay(object):
                 'markdown': the output is expected to be Markdown-formatted.
                     Convert it to HTML.
             dft_key: If key is None, this default key is taken, supplemented by
-                kprefix and ksuffix if available
-            kprefix: prefix for the default key
-            ksuffix: suffix for the default key
+                kpfx and ksfx if available
+            kpfx: prefix for the default key
+            ksfx: suffix for the default key
         """
-        key = self._construct_key(key, dft_key, kprefix, ksuffix)
+        key = self._construct_key(key, dft_key, kpfx, ksfx)
 
         if not content.strip():
             return
@@ -233,8 +233,8 @@ class HTMLDisplay(object):
         figsize: Optional[Tuple[float, float]] = None,
         refresh_millisec: Optional[float] = None, tight_layout: bool = True,
         close_all: bool = True, rendering: str = 'preformatted',
-        dft_key: Optional[str] = None, kprefix: Optional[str] = None,
-        ksuffix: Optional[str] = None
+        dft_key: Optional[str] = None, kpfx: Optional[str] = None,
+        ksfx: Optional[str] = None
     ) -> None:
         """Context manager to convert the plot created in the context manager's
         block into a PNG file
@@ -281,11 +281,11 @@ class HTMLDisplay(object):
                 'markdown': the output is expected to be Markdown-formatted.
                     Convert it to HTML.
             dft_key: If key is None, this default key is taken, supplemented by
-                kprefix and ksuffix if available
-            kprefix: prefix for the default key
-            ksuffix: suffix for the default key
+                kpfx and ksfx if available
+            kpfx: prefix for the default key
+            ksfx: suffix for the default key
         """
-        key = self._construct_key(key, dft_key, kprefix, ksuffix)
+        key = self._construct_key(key, dft_key, kpfx, ksfx)
 
         key, plot_filepath = self._get_figure_path(key)
 
