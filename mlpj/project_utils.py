@@ -8,7 +8,7 @@ import random
 import contextlib
 import tempfile
 import collections
-from typing import Optional, Any, List, Union, Dict
+from typing import Optional, Any, List, Union, Dict, Callable
 from collections.abc import Generator
 
 import numpy as np
@@ -225,21 +225,35 @@ class Manager(object):
         return self.display.get_findings()
 
 
-    def call_and_printer(self, fct, *args, **kwargs) -> Any:
+    def call_and_printer(self, fct: Callable, *args, **kwargs) -> Any:
         """Call a function and print its output using `printer`
 
         Extract all keyword arguments that begin with and underscore, remove the
         underscore and pass them to `printer`.
+
+        Args:
+            fct: the function to call
+            _print_call: Print the function name and its arguments as well.
+            remaining params: The ones without initial underscores are
+                the parameters of `fct`; the rest are params of `printer`. (The
+                initial underscore is removed from them.)
         """
         kwargs_for_printer = collections.OrderedDict(
-            (name[1:], value) for name, value in kwargs.items()
-            if name.startswith('_'))
+            (key[1:], value) for key, value in kwargs.items()
+            if key.startswith('_') and key != '_print_call')
         kwargs_for_fct = collections.OrderedDict(
             (key, value) for key, value in kwargs.items()
             if not key.startswith('_'))
 
-        result = fct(*args, **kwargs_for_fct)
         with self.printer(**kwargs_for_printer):
+            if kwargs.get('_print_call', False):
+                args_s = ', '.join(
+                    [str(arg) for arg in args]
+                    + [f'{param}={value}' for param, value in kwargs_for_fct])
+                print(f"calling: {fct.__name__}({args_s})")
+                print()
+
+            result = fct(*args, **kwargs_for_fct)
             print(result)
 
     def call_and_html(self, fct, *args, **kwargs) -> Any:
