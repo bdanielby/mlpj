@@ -244,12 +244,12 @@ class Manager(object):
 
     def call_and_html(self, fct, *args, **kwargs) -> Any:
         """Same as `call_and_printer` but with `rendering='html'`"""
-        kwargs['rendering'] = 'html'
+        kwargs['_rendering'] = 'html'
         return self.call_and_printer(fct, *args, **kwargs)
 
     def call_and_markdown(self, fct, *args, **kwargs) -> Any:
         """Same as `call_and_printer` but with `rendering='markdown'`"""
-        kwargs['rendering'] = 'markdown'
+        kwargs['_rendering'] = 'markdown'
         return self.call_and_printer(fct, *args, **kwargs)
 
 
