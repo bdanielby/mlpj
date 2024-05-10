@@ -275,7 +275,11 @@ class Manager(object):
 
         Args:
             fct: the function to call
-            _print_call: Print the function name and its arguments as well.
+            _print_call (int): Whether to the function name and its arguments as
+                well:
+                0: no
+                1: yes
+                2: (default) only if there are arguments
             remaining params: The ones without initial underscores are
                 the parameters of `fct`; the rest are params of `printer`. (The
                 initial underscore is removed from them.)
@@ -288,7 +292,11 @@ class Manager(object):
             if not key.startswith('_'))
 
         with self.printer(**kwargs_for_printer):
-            if kwargs.get('_print_call', False):
+            print_call = kwargs.get('_print_call', 2)
+            if (
+                print_call == 1
+                or print_call == 2 and len(args) + len(kwargs_for_fct) > 0
+            ):
                 args_s = ', '.join(
                     [str(arg) for arg in args]
                     + [f'{param}={repr(value)}'
