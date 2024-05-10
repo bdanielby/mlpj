@@ -291,7 +291,7 @@ class Manager(object):
             if kwargs.get('_print_call', False):
                 args_s = ', '.join(
                     [str(arg) for arg in args]
-                    + [f'{param}={value}'
+                    + [f'{param}={repr(value)}'
                        for param, value in kwargs_for_fct.items()])
                 print(f"calling: {fct.__name__}({args_s})")
                 print()
